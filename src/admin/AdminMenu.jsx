@@ -284,13 +284,14 @@ setPrepaidRequired(false);
 {/* PREORDER SETTINGS */}
 <div className="border rounded-lg p-4 space-y-3">
   <label className="flex items-center gap-2 text-sm font-medium">
-    <input
-      type="checkbox"
-      checked={preorderEnabled}
-      onChange={(e) => setPreorderEnabled(e.target.checked)}
-    />
-    Enable Preorder
-  </label>
+  <input
+    type="checkbox"
+    checked={preorderEnabled}
+    onChange={(e) => setPreorderEnabled(e.target.checked)}
+  />
+  Enable Preorder (Same-day if unchecked)
+</label>
+
 
   {preorderEnabled && (
     <>
