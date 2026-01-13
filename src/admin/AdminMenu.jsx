@@ -21,6 +21,8 @@ const [festivals, setFestivals] = useState([]);
 const [festivalId, setFestivalId] = useState("");
 
 const [description, setDescription] = useState("");
+const [servingInfo, setServingInfo] = useState("");
+
 // BRANCHES
 const [branches, setBranches] = useState([]);
 const [selectedBranches, setSelectedBranches] = useState([]);
@@ -119,6 +121,8 @@ const submitHandler = async (e) => {
   const data = new FormData();
   data.append("name", name);
   data.append("description", description);
+  data.append("servingInfo", servingInfo);
+
   data.append("category", categoryId);        // ✅ FIX
   data.append("subcategory", subcategoryId); // ✅ FIX
   data.append("variants", JSON.stringify(cleanedVariants));
@@ -165,6 +169,8 @@ data.append(
     // RESET
     setName("");
     setDescription("");
+    setServingInfo("");
+
 
     setCategoryId("");
     setSelectedBranches([]);
@@ -211,6 +217,14 @@ setPrepaidRequired(false);
   className="w-full border rounded-lg px-4 py-2 resize-none"
 />
 
+{/* SERVING INFO */}
+<textarea
+  placeholder="Serving Info (example: 5 inch cakes: For 3 to 5 pax | 8 inch cakes: For 8 to 12 pax)"
+  value={servingInfo}
+  onChange={(e) => setServingInfo(e.target.value)}
+  rows={2}
+  className="w-full border rounded-lg px-4 py-2 resize-none"
+/>
 
           {/* CATEGORY */}
           <select

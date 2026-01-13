@@ -26,6 +26,8 @@ const EditMenu = () => {
   const [loading, setLoading] = useState(false);
 
   const [description, setDescription] = useState("");
+  const [servingInfo, setServingInfo] = useState(""); // ✅ NEW
+
 
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
@@ -79,6 +81,8 @@ useEffect(() => {
 
     setName(item.name || "");
     setDescription(item.description || "");
+    setServingInfo(item.servingInfo || "");
+
     setCategoryId(item.category?._id || "");
     setSubcategoryId(item.subcategory?._id || "");
     setFestivalId(item.festival?._id || "");
@@ -167,6 +171,8 @@ const submitHandler = async (e) => {
 
   data.append("name", name.trim());
   data.append("description", description || "");
+  data.append("servingInfo", servingInfo || ""); // ✅ NEW
+
   data.append("category", categoryId);
   data.append("variants", JSON.stringify(cleanedVariants));
   data.append("isBestSeller", isBestSeller);
@@ -251,6 +257,15 @@ data.append(
           rows={3}
           className="w-full border rounded px-4 py-2 resize-none"
         />
+
+<textarea
+  placeholder="Serving Info (example: 5 inch cakes: For 3 to 5 pax | 8 inch cakes: For 8 to 12 pax)"
+  value={servingInfo}
+  onChange={(e) => setServingInfo(e.target.value)}
+  rows={2}
+  className="w-full border rounded px-4 py-2 resize-none"
+/>
+
 
         <select
           value={categoryId}
