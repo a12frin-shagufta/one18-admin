@@ -198,10 +198,11 @@ const AdminMenu = () => {
     { id: "details", label: "Details" },
     { id: "pricing", label: "Pricing" },
     { id: "media", label: "Media" },
+    { id: "branches", label: "Branches" }, // ✅ Added for better phone UX
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-6">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-6 pb-24 md:pb-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-6 md:mb-8">
@@ -213,18 +214,19 @@ const AdminMenu = () => {
           </p>
         </div>
 
-        {/* Mobile Navigation Tabs */}
-        <div className="md:hidden mb-6">
-          <div className="flex overflow-x-auto pb-2 gap-1">
+        {/* Mobile Navigation Tabs (Sticky + Better UX) */}
+        <div className="md:hidden mb-6 sticky top-0 z-30 bg-gray-50 pt-2">
+          <div className="flex gap-2 overflow-x-auto pb-2">
             {sections.map((section) => (
               <button
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
-                className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeSection === section.id
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-600 border"
-                }`}
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition
+                  ${
+                    activeSection === section.id
+                      ? "bg-blue-600 text-white"
+                      : "bg-white text-gray-600 border"
+                  }`}
               >
                 {section.label}
               </button>
@@ -426,6 +428,7 @@ const AdminMenu = () => {
                             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                           />
                         </div>
+
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Price *
@@ -449,6 +452,7 @@ const AdminMenu = () => {
                           </div>
                         </div>
                       </div>
+
                       <button
                         type="button"
                         onClick={() => removeVariant(i)}
@@ -481,11 +485,13 @@ const AdminMenu = () => {
                   <FiUpload className="text-blue-600" />
                   Product Images
                 </h2>
+
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Upload Images (max {MAX_IMAGES})
                     </label>
+
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                       {/* Upload Button */}
                       {images.length < MAX_IMAGES && (
@@ -513,20 +519,25 @@ const AdminMenu = () => {
                             alt={`Preview ${index + 1}`}
                             className="w-full h-full object-cover"
                           />
+
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all" />
+
+                          {/* ✅ Bigger tap target for mobile */}
                           <button
                             type="button"
                             onClick={() => removeImage(index)}
-                            className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute top-2 right-2 bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center text-sm active:scale-95 transition"
                           >
                             ✕
                           </button>
+
                           <div className="absolute bottom-2 left-2 right-2 text-xs text-white bg-black/60 rounded px-2 py-1 truncate">
                             {img.name}
                           </div>
                         </div>
                       ))}
                     </div>
+
                     <p className="text-sm text-gray-500 mt-3">
                       {images.length} of {MAX_IMAGES} images uploaded
                     </p>
@@ -534,8 +545,8 @@ const AdminMenu = () => {
                 </div>
               </div>
 
-              {/* Submit Button (Mobile) */}
-              <div className="md:hidden">
+              {/* ✅ EXTRA: mobile form submit (kept as your original too) */}
+              {/* <div className="md:hidden">
                 <button
                   type="submit"
                   disabled={loading}
@@ -550,18 +561,23 @@ const AdminMenu = () => {
                     "Add Menu Item"
                   )}
                 </button>
-              </div>
+              </div> */}
             </form>
           </div>
 
-          {/* Right Sidebar */}
-          <div className="lg:w-1/3">
+          {/* ✅ Right Sidebar (Responsive logic improved, same content) */}
+          <div
+            className={`lg:w-1/3 ${
+              activeSection === "branches" ? "block" : "hidden lg:block"
+            }`}
+          >
             <div className="space-y-6">
               {/* Branches Card */}
               <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
                   Available Branches *
                 </h2>
+
                 <div className="space-y-3">
                   <div className="flex gap-2 mb-3">
                     <button
@@ -579,6 +595,7 @@ const AdminMenu = () => {
                       Clear All
                     </button>
                   </div>
+
                   <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
                     {branches.map((branch) => (
                       <label
@@ -602,8 +619,10 @@ const AdminMenu = () => {
                       </label>
                     ))}
                   </div>
+
                   <p className="text-sm text-gray-500">
-                    {selectedBranches.length} of {branches.length} branches selected
+                    {selectedBranches.length} of {branches.length} branches
+                    selected
                   </p>
                 </div>
               </div>
@@ -613,6 +632,7 @@ const AdminMenu = () => {
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
                   Preorder Settings
                 </h2>
+
                 <div className="space-y-4">
                   <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition">
                     <input
@@ -637,6 +657,7 @@ const AdminMenu = () => {
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Minimum Advance Days
                         </label>
+
                         <div className="relative">
                           <input
                             type="number"
@@ -651,6 +672,7 @@ const AdminMenu = () => {
                         </div>
                       </div>
 
+                      {/* kept same commented prepaidRequired */}
                       {/* <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition">
                         <input
                           type="checkbox"
@@ -677,6 +699,7 @@ const AdminMenu = () => {
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
                   Summary
                 </h2>
+
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Name:</span>
@@ -729,6 +752,18 @@ const AdminMenu = () => {
         <div className="md:hidden mt-6 text-center text-sm text-gray-500">
           <p>Use the tabs above to navigate between sections</p>
         </div>
+      </div>
+
+      {/* ✅ Sticky Bottom Submit Button - Mobile Only (best UX) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t p-3">
+        <button
+          type="submit"
+          onClick={submitHandler}
+          disabled={loading}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? "Adding Item..." : "Add Menu Item"}
+        </button>
       </div>
     </div>
   );

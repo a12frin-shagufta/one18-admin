@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { FiPlus, FiTrash, FiArrowLeft, FiUpload } from "react-icons/fi";
+import { toast } from "react-toastify";
 
 const MAX_IMAGES = 5;
 
@@ -29,13 +30,24 @@ const EditMenu = () => {
   const [subcategoryId, setSubcategoryId] = useState("");
   const [festivals, setFestivals] = useState([]);
   const [festivalId, setFestivalId] = useState("");
-  
+
   const [branches, setBranches] = useState([]);
   const [selectedBranches, setSelectedBranches] = useState([]);
-  
+
   const [preorderEnabled, setPreorderEnabled] = useState(false);
   const [minDays, setMinDays] = useState(0);
   const [prepaidRequired, setPrepaidRequired] = useState(false);
+
+  // ✅ Mobile Tabs
+  const [activeSection, setActiveSection] = useState("basic");
+
+  const sections = [
+    { id: "basic", label: "Basic Info" },
+    { id: "details", label: "Details" },
+    { id: "pricing", label: "Pricing" },
+    { id: "media", label: "Media" },
+    { id: "branches", label: "Branches" },
+  ];
 
   // Fetch data
   useEffect(() => {
@@ -51,6 +63,7 @@ const EditMenu = () => {
         setFestivals(festivalsRes.data);
       } catch (err) {
         console.error("Failed to fetch initial data:", err);
+        toast.error("❌ Failed to load initial data");
       }
     };
     fetchData();
@@ -60,36 +73,46 @@ const EditMenu = () => {
   useEffect(() => {
     if (!id) return;
 
-    axios.get(`${BACKEND_URL}/api/menu/${id}`).then((res) => {
-      const item = res.data;
+    axios
+      .get(`${BACKEND_URL}/api/menu/${id}`)
+      .then((res) => {
+        const item = res.data;
 
-      setName(item.name || "");
-      setDescription(item.description || "");
-      setServingInfo(item.servingInfo || "");
-      setCategoryId(item.category?._id || "");
-      setSubcategoryId(item.subcategory?._id || "");
-      setFestivalId(item.festival?._id || "");
-      setVariants(
-        item.variants?.length ? item.variants : [{ label: "", price: "" }]
-      );
-      setIsBestSeller(!!item.isBestSeller);
-      setInStock(item.inStock !== false);
-      setExistingImages(item.images || []);
-      setSelectedBranches(item.branches || []);
+        setName(item.name || "");
+        setDescription(item.description || "");
+        setServingInfo(item.servingInfo || "");
+        setCategoryId(item.category?._id || "");
+        setSubcategoryId(item.subcategory?._id || "");
+        setFestivalId(item.festival?._id || "");
+        setVariants(
+          item.variants?.length ? item.variants : [{ label: "", price: "" }]
+        );
+        setIsBestSeller(!!item.isBestSeller);
+        setInStock(item.inStock !== false);
+        setExistingImages(item.images || []);
+        setSelectedBranches(item.branches || []);
 
-      if (item.preorder?.enabled) {
-        setPreorderEnabled(true);
-        setMinDays(item.preorder.minDays || 0);
-        setPrepaidRequired(!!item.preorder.prepaidRequired);
-      }
+        if (item.preorder?.enabled) {
+          setPreorderEnabled(true);
+          setMinDays(item.preorder.minDays || 0);
+          setPrepaidRequired(!!item.preorder.prepaidRequired);
+        } else {
+          setPreorderEnabled(false);
+          setMinDays(0);
+          setPrepaidRequired(false);
+        }
 
-      // Fetch subcategories if category exists
-      if (item.category?._id) {
-        axios
-          .get(`${BACKEND_URL}/api/subcategories?category=${item.category._id}`)
-          .then((res) => setSubcategories(res.data));
-      }
-    }).catch(err => console.error("Failed to fetch item:", err));
+        // Fetch subcategories if category exists
+        if (item.category?._id) {
+          axios
+            .get(`${BACKEND_URL}/api/subcategories?category=${item.category._id}`)
+            .then((res) => setSubcategories(res.data));
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch item:", err);
+        toast.error("❌ Failed to load item");
+      });
   }, [id]);
 
   // Fetch subcategories when category changes
@@ -108,9 +131,9 @@ const EditMenu = () => {
   // Image handlers
   const handleImageSelect = (e) => {
     const files = Array.from(e.target.files);
-    setImages((prev) =>
-      [...prev, ...files].slice(0, MAX_IMAGES - existingImages.length)
-    );
+    const remaining = MAX_IMAGES - existingImages.length;
+
+    setImages((prev) => [...prev, ...files].slice(0, remaining));
   };
 
   const removeNewImage = (i) => {
@@ -133,15 +156,15 @@ const EditMenu = () => {
 
   // Branch selection
   const toggleBranch = (branchId) => {
-    setSelectedBranches(prev =>
+    setSelectedBranches((prev) =>
       prev.includes(branchId)
-        ? prev.filter(id => id !== branchId)
+        ? prev.filter((id) => id !== branchId)
         : [...prev, branchId]
     );
   };
 
   const selectAllBranches = () => {
-    setSelectedBranches(branches.map(branch => branch._id));
+    setSelectedBranches(branches.map((branch) => branch._id));
   };
 
   const clearAllBranches = () => {
@@ -153,24 +176,24 @@ const EditMenu = () => {
     e.preventDefault();
 
     if (!categoryId) {
-      alert("Please select a category");
+      toast.error("❌ Please select a category");
       return;
     }
 
     const cleanedVariants = variants
-      .filter(v => v.price !== "" && Number(v.price) > 0)
-      .map(v => ({
+      .filter((v) => v.price !== "" && Number(v.price) > 0)
+      .map((v) => ({
         label: v.label?.trim() || "",
         price: Number(v.price),
       }));
 
     if (cleanedVariants.length === 0) {
-      alert("At least one variant price is required");
+      toast.error("❌ At least one variant price is required");
       return;
     }
 
     if (selectedBranches.length === 0) {
-      alert("Please select at least one branch");
+      toast.error("❌ Please select at least one branch");
       return;
     }
 
@@ -195,31 +218,29 @@ const EditMenu = () => {
 
     if (subcategoryId) data.append("subcategory", subcategoryId);
     if (festivalId) data.append("festival", festivalId);
-    images.forEach(img => data.append("images", img));
+    images.forEach((img) => data.append("images", img));
 
     try {
       setLoading(true);
-      await axios.put(
-        `${BACKEND_URL}/api/menu/${id}`,
-        data,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      alert("Menu item updated ✅");
+
+      await axios.put(`${BACKEND_URL}/api/menu/${id}`, data, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      toast.success("✅ Menu item updated!");
       navigate("/admin/menu");
     } catch (err) {
       console.error("UPDATE ERROR:", err.response?.data || err);
-      alert("Update failed");
+      toast.error(err.response?.data?.message || "❌ Update failed");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-6 pb-24 md:pb-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -230,21 +251,46 @@ const EditMenu = () => {
             <FiArrowLeft />
             <span>Back to Menu</span>
           </button>
-          
+
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
             Edit Menu Item
           </h1>
           <p className="text-gray-600 mt-2">Update your menu item details</p>
         </div>
 
+        {/* ✅ Sticky Mobile Tabs */}
+        <div className="md:hidden mb-6 sticky top-0 z-30 bg-gray-50 pt-2">
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {sections.map((section) => (
+              <button
+                key={section.id}
+                onClick={() => setActiveSection(section.id)}
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition
+                  ${
+                    activeSection === section.id
+                      ? "bg-blue-600 text-white"
+                      : "bg-white text-gray-600 border"
+                  }`}
+              >
+                {section.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Left Column - Main Form */}
+          {/* Left Column */}
           <div className="lg:w-2/3 space-y-6">
             {/* Basic Information Card */}
-            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+            <div
+              className={`bg-white rounded-xl shadow-sm p-4 sm:p-6 ${
+                activeSection === "basic" ? "block" : "hidden md:block"
+              }`}
+            >
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Basic Information
               </h2>
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -287,10 +333,15 @@ const EditMenu = () => {
             </div>
 
             {/* Category & Details Card */}
-            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+            <div
+              className={`bg-white rounded-xl shadow-sm p-4 sm:p-6 ${
+                activeSection === "details" ? "block" : "hidden md:block"
+              }`}
+            >
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Category & Details
               </h2>
+
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -342,7 +393,7 @@ const EditMenu = () => {
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                   >
                     <option value="">No Festival</option>
-                    {festivals.map(f => (
+                    {festivals.map((f) => (
                       <option key={f._id} value={f._id}>
                         {f.name}
                       </option>
@@ -377,9 +428,7 @@ const EditMenu = () => {
                       className="w-5 h-5 text-blue-600 rounded"
                     />
                     <div>
-                      <span className="font-medium text-gray-900">
-                        In Stock
-                      </span>
+                      <span className="font-medium text-gray-900">In Stock</span>
                       <p className="text-sm text-gray-500">
                         Available for order
                       </p>
@@ -390,10 +439,15 @@ const EditMenu = () => {
             </div>
 
             {/* Pricing Card */}
-            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+            <div
+              className={`bg-white rounded-xl shadow-sm p-4 sm:p-6 ${
+                activeSection === "pricing" ? "block" : "hidden md:block"
+              }`}
+            >
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Pricing & Variants
               </h2>
+
               <div className="space-y-4">
                 {variants.map((variant, i) => (
                   <div
@@ -407,11 +461,14 @@ const EditMenu = () => {
                         </label>
                         <input
                           value={variant.label}
-                          onChange={(e) => updateVariant(i, "label", e.target.value)}
+                          onChange={(e) =>
+                            updateVariant(i, "label", e.target.value)
+                          }
                           className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                           placeholder="e.g., Small, Medium, Large"
                         />
                       </div>
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Price *
@@ -425,7 +482,9 @@ const EditMenu = () => {
                             step="0.01"
                             min="0"
                             value={variant.price}
-                            onChange={(e) => updateVariant(i, "price", e.target.value)}
+                            onChange={(e) =>
+                              updateVariant(i, "price", e.target.value)
+                            }
                             required
                             className="w-full border border-gray-300 rounded-lg pl-8 pr-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                             placeholder="0.00"
@@ -433,6 +492,7 @@ const EditMenu = () => {
                         </div>
                       </div>
                     </div>
+
                     <button
                       type="button"
                       onClick={() => removeVariant(i)}
@@ -456,13 +516,18 @@ const EditMenu = () => {
             </div>
           </div>
 
-          {/* Right Column - Sidebar */}
-          <div className="lg:w-1/3 space-y-6">
+          {/* Right Column - Responsive (show on mobile only when Branches tab selected) */}
+          <div
+            className={`lg:w-1/3 space-y-6 ${
+              activeSection === "branches" ? "block" : "hidden lg:block"
+            }`}
+          >
             {/* Branches Card */}
             <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Available Branches *
               </h2>
+
               <div className="space-y-3">
                 <div className="flex gap-2 mb-3">
                   <button
@@ -472,6 +537,7 @@ const EditMenu = () => {
                   >
                     Select All
                   </button>
+
                   <button
                     type="button"
                     onClick={clearAllBranches}
@@ -480,6 +546,7 @@ const EditMenu = () => {
                     Clear All
                   </button>
                 </div>
+
                 <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
                   {branches.map((branch) => (
                     <label
@@ -492,6 +559,7 @@ const EditMenu = () => {
                         onChange={() => toggleBranch(branch._id)}
                         className="w-5 h-5 text-blue-600 rounded"
                       />
+
                       <div className="flex-1">
                         <span className="font-medium text-gray-900">
                           {branch.name}
@@ -503,6 +571,7 @@ const EditMenu = () => {
                     </label>
                   ))}
                 </div>
+
                 <p className="text-sm text-gray-500">
                   {selectedBranches.length} of {branches.length} branches selected
                 </p>
@@ -514,6 +583,7 @@ const EditMenu = () => {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Preorder Settings
               </h2>
+
               <div className="space-y-4">
                 <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition">
                   <input
@@ -538,6 +608,7 @@ const EditMenu = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Minimum Advance Days
                       </label>
+
                       <div className="relative">
                         <input
                           type="number"
@@ -573,37 +644,50 @@ const EditMenu = () => {
               </div>
             </div>
 
-            {/* Images Card */}
-            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+            {/* Media Card (same UI, inside right column like your original) */}
+            <div
+              className={`bg-white rounded-xl shadow-sm p-4 sm:p-6 ${
+                activeSection === "media" ? "block" : "hidden md:block"
+              }`}
+            >
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <FiUpload className="text-blue-600" />
                 Product Images
               </h2>
+
               <div className="space-y-4">
                 <p className="text-sm text-gray-600 mb-2">
                   Upload new images or remove existing ones (max {MAX_IMAGES} total)
                 </p>
-                
+
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {/* Existing Images */}
                   {existingImages.map((img, i) => (
-                    <div key={`old-${i}`} className="aspect-square relative rounded-lg overflow-hidden border group">
+                    <div
+                      key={`old-${i}`}
+                      className="aspect-square relative rounded-lg overflow-hidden border group"
+                    >
                       <img
                         src={img}
                         className="w-full h-full object-cover"
                         alt={`Existing ${i + 1}`}
                       />
+
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all" />
+
                       <button
                         type="button"
                         onClick={() => {
-                          setExistingImages(prev => prev.filter((_, idx) => idx !== i));
-                          setRemovedImages(prev => [...prev, img]);
+                          setExistingImages((prev) =>
+                            prev.filter((_, idx) => idx !== i)
+                          );
+                          setRemovedImages((prev) => [...prev, img]);
                         }}
-                        className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-2 right-2 bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center text-sm active:scale-95 transition"
                       >
                         ✕
                       </button>
+
                       <div className="absolute bottom-2 left-2 text-xs text-white bg-black/60 rounded px-2 py-1">
                         Existing
                       </div>
@@ -612,20 +696,26 @@ const EditMenu = () => {
 
                   {/* New Images */}
                   {images.map((img, i) => (
-                    <div key={`new-${i}`} className="aspect-square relative rounded-lg overflow-hidden border group">
+                    <div
+                      key={`new-${i}`}
+                      className="aspect-square relative rounded-lg overflow-hidden border group"
+                    >
                       <img
                         src={URL.createObjectURL(img)}
                         className="w-full h-full object-cover"
                         alt={`New ${i + 1}`}
                       />
+
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all" />
+
                       <button
                         type="button"
                         onClick={() => removeNewImage(i)}
-                        className="absolute top-2 right-2 bg-black text-white rounded-full w-7 h-7 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-2 right-2 bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center text-sm active:scale-95 transition"
                       >
                         ✕
                       </button>
+
                       <div className="absolute bottom-2 left-2 text-xs text-white bg-black/60 rounded px-2 py-1">
                         New
                       </div>
@@ -654,24 +744,43 @@ const EditMenu = () => {
               </div>
             </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              onClick={submitHandler}
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-4 px-4 rounded-xl shadow-lg transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-3">
-                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Updating...
-                </span>
-              ) : (
-                "Update Menu Item"
-              )}
-            </button>
+            {/* Desktop Submit Button (kept) */}
+            <div className="hidden md:block">
+              <button
+                type="button"
+                onClick={submitHandler}
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-4 px-4 rounded-xl shadow-lg transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-3">
+                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Updating...
+                  </span>
+                ) : (
+                  "Update Menu Item"
+                )}
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Mobile helper */}
+        <div className="md:hidden mt-6 text-center text-sm text-gray-500">
+          <p>Use the tabs above to navigate between sections</p>
+        </div>
+      </div>
+
+      {/* ✅ Sticky Bottom Update Button (Mobile Only) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t p-3">
+        <button
+          type="button"
+          onClick={submitHandler}
+          disabled={loading}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? "Updating..." : "Update Menu Item"}
+        </button>
       </div>
     </div>
   );
