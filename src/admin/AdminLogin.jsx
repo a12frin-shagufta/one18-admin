@@ -3,6 +3,8 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Eye, EyeOff } from "lucide-react"; // You can use any icon library
+import { toast } from "react-toastify";
+
 
 const AdminLogin = () => {
   const [email, setEmail] = useState("");
@@ -17,24 +19,30 @@ const AdminLogin = () => {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
   const submitHandler = async (e) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
+  e.preventDefault();
+  setError("");
+  setIsLoading(true);
 
-    try {
-      const res = await axios.post(
-        `${BACKEND_URL}/api/admin/login`,
-        { email, password }
-      );
+  try {
+    const res = await axios.post(`${BACKEND_URL}/api/admin/login`, {
+      email,
+      password,
+    });
 
-      login(res.data.token); // 🔑 SAVE TOKEN
-      navigate("/admin/menu");
-    } catch (err) {
-      setError(err.response?.data?.message || "Invalid email or password");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    login(res.data.token); // 🔑 SAVE TOKEN
+
+    toast.success("✅ Admin login successful!");
+    navigate("/admin/menu");
+  } catch (err) {
+    const msg = err.response?.data?.message || "Invalid email or password";
+
+    setError(msg); // keep red box also if you want
+    toast.error(`❌ ${msg}`);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);

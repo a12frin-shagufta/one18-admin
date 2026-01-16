@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { toast } from "react-toastify";
+
 
 const AdminCategory = () => {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
@@ -22,7 +24,10 @@ const AdminCategory = () => {
   // ✅ ADD CATEGORY (send file to backend)
  
 const addCategory = async () => {
-  if (!name.trim()) return alert("Enter category name");
+  if (!name.trim()) {
+    toast.error("❌ Enter category name");
+    return;
+  }
 
   const formData = new FormData();
   formData.append("name", name);
@@ -35,14 +40,15 @@ const addCategory = async () => {
     setUploading(true);
 
     await axios.post(`${BACKEND_URL}/api/categories`, formData);
-    // ❌ DO NOT set Content-Type manually
+
+    toast.success("✅ Category added successfully!");
 
     setName("");
     setImageFile(null);
     setPreview("");
     fetchCategories();
   } catch (err) {
-    alert(err.response?.data?.message || "Failed to add category");
+    toast.error(err.response?.data?.message || "❌ Failed to add category");
   } finally {
     setUploading(false);
   }
@@ -50,10 +56,18 @@ const addCategory = async () => {
 
 
   const deleteCategory = async (id) => {
-    if (!window.confirm("Delete this category?")) return;
+  const ok = window.confirm("Delete this category?");
+  if (!ok) return;
+
+  try {
     await axios.delete(`${BACKEND_URL}/api/categories/${id}`);
+    toast.success("🗑️ Category deleted!");
     fetchCategories();
-  };
+  } catch (err) {
+    toast.error(err.response?.data?.message || "❌ Failed to delete category");
+  }
+};
+
 
   return (
     <div className="max-w-md bg-white p-4 rounded shadow">

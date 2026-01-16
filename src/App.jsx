@@ -12,11 +12,24 @@ import AdminFestivalList from "./admin/AdminFestivalList";
 import AdminOffer from "./admin/AdminOffer";
 import AdminCategory from "./admin/AdminCategory";
 import AdminSubcategory from "./admin/AdminSubcategory";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 
 function App() {
   const { token } = useAuth();
 
   return (
+    <>
+    <ToastContainer
+        position="top-right"
+        autoClose={2000}
+        hideProgressBar={false}
+        closeOnClick
+        pauseOnHover
+        draggable
+        theme="light"
+      />
     <Routes>
       {/* ✅ DEFAULT PAGE */}
       <Route
@@ -63,6 +76,7 @@ function App() {
         element={<Navigate to={token ? "/admin/menu" : "/admin/login"} replace />}
       />
     </Routes>
+    </>
   );
 }
 
