@@ -79,33 +79,41 @@ const AdminLogin = () => {
               />
             </div>
             <div className="relative">
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm pr-10"
-                placeholder="Password"
-              />
-              <button
-                type="button"
-                onClick={togglePasswordVisibility}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                tabIndex="-1"
-              >
-                {showPassword ? (
-                  <EyeOff className="h-5 w-5" />
-                ) : (
-                  <Eye className="h-5 w-5" />
-                )}
-              </button>
-            </div>
+  <label htmlFor="password" className="sr-only">
+    Password
+  </label>
+
+  <input
+    id="password"
+    name="password"
+    type={showPassword ? "text" : "password"}
+    autoComplete="current-password"
+    required
+    value={password}
+    onChange={(e) => setPassword(e.target.value)}
+    className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 
+               placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none 
+               focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm
+               pr-14"   // ✅ more space for icon
+    placeholder="Password"
+  />
+
+  <button
+    type="button"
+    onClick={togglePasswordVisibility}
+    className="absolute right-2 top-1/2 -translate-y-1/2
+               p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100
+               active:scale-95 transition z-20"   // ✅ clickable always
+  >
+    {showPassword ? (
+      <EyeOff className="h-5 w-5" />
+    ) : (
+      <Eye className="h-5 w-5" />
+    )}
+  </button>
+</div>
+
+              
           </div>
 
           {error && (
