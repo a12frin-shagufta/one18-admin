@@ -8,6 +8,8 @@ const AdminOrders = () => {
   const token = localStorage.getItem("adminToken");
 
   const [orders, setOrders] = useState([]);
+  const [processingId, setProcessingId] = useState(null);
+
 
   useEffect(() => {
     axios
@@ -52,6 +54,45 @@ const AdminOrders = () => {
       alert(err.response?.data?.message || "Failed to request Lalamove booking");
     }
   };
+
+
+  const acceptPayNow = async (id) => {
+  if (processingId === id) return;
+
+  try {
+    setProcessingId(id);
+
+    await axios.put(
+      `${BACKEND_URL}/api/payment/paynow/${id}/accept`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    refreshOrders();
+  } finally {
+    setProcessingId(null);
+  }
+};
+
+
+const rejectPayNow = async (id) => {
+  if (processingId === id) return;
+
+  try {
+    setProcessingId(id);
+
+    await axios.put(
+      `${BACKEND_URL}/api/payment/paynow/${id}/reject`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    refreshOrders();
+  } finally {
+    setProcessingId(null);
+  }
+};
+
 
   return (
     <div className="p-4 sm:p-6">
@@ -225,6 +266,68 @@ const AdminOrders = () => {
                   </button>
                 )}
               </div>
+
+            <p className="text-sm mt-2">
+  💳 {order.paymentMethod?.toUpperCase()} •
+
+  <span
+    className={`ml-2 px-2 py-1 rounded text-xs font-semibold
+      ${
+        order.paymentStatus === "paid"
+          ? "bg-green-100 text-green-700"
+          : order.paymentStatus === "rejected"
+          ? "bg-red-100 text-red-700"
+          : "bg-yellow-100 text-yellow-700"
+      }
+    `}
+  >
+    {order.paymentStatus.toUpperCase()}
+  </span>
+</p>
+
+
+{order.paymentMethod === "paynow" && order.paymentProof && (
+  <div className="mt-4">
+    <p className="font-medium mb-2">Payment Proof</p>
+    <a
+      href={order.paymentProof}
+      target="_blank"
+      rel="noreferrer"
+    >
+      <img
+  src={order.paymentProof}
+  alt="Payment proof"
+  className="w-full max-h-40 object-cover rounded-lg border"
+/>
+
+    </a>
+  </div>
+)}
+
+{order.paymentMethod === "paynow" &&
+  order.paymentStatus === "pending" && (
+    <div className="flex gap-2 mt-3">
+      <button
+  disabled={processingId === order._id}
+  onClick={() => acceptPayNow(order._id)}
+  className="flex-1 bg-green-600 text-white py-2 rounded disabled:opacity-50"
+>
+  {processingId === order._id ? "Processing..." : "Accept Payment"}
+</button>
+
+<button
+  disabled={processingId === order._id}
+  onClick={() => rejectPayNow(order._id)}
+  className="flex-1 bg-red-600 text-white py-2 rounded disabled:opacity-50"
+>
+  Reject Payment
+</button>
+
+    </div>
+)}
+
+
+
             </div>
           ))}
         </div>
