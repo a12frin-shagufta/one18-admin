@@ -131,6 +131,14 @@ const rejectPayNow = async (id) => {
                   )}
                 </div>
               </div>
+              {order.branch && (
+  <div className="text-sm mb-3 bg-purple-50 p-3 rounded-lg">
+    <p className="font-semibold mb-1">🏬 Branch</p>
+    <p>{order.branch.name}</p>
+    <p className="text-gray-600">{order.branch.address}</p>
+  </div>
+)}
+
 
               {/* Date & Time */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
