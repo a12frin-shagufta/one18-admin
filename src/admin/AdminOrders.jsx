@@ -43,18 +43,24 @@ const AdminOrders = () => {
   };
 
   const requestLalamoveBooking = async (id) => {
-    try {
-      await axios.put(
-        `${BACKEND_URL}/api/orders/${id}/lalamove/request`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      refreshOrders();
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to request Lalamove booking");
-    }
-  };
-
+  setProcessingId(id); // Set loading state
+  try {
+    const res = await axios.put(
+      `${BACKEND_URL}/api/orders/${id}/lalamove/request`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    
+    // ✅ ADD NOTIFICATION
+    alert("🚀 Lalamove Booked Successfully!");
+    
+    refreshOrders();
+  } catch (err) {
+    alert(err.response?.data?.message || "Failed to request Lalamove booking");
+  } finally {
+    setProcessingId(null); // Clear loading state
+  }
+};
 
   const acceptPayNow = async (id) => {
   if (processingId === id) return;
@@ -256,6 +262,34 @@ const rejectPayNow = async (id) => {
                 </div>
               </div>
 
+              {/* Lalamove Live Tracking UI */}
+{/* After a successful booking, show the tracking link directly on the card */}
+{order.lalamoveStatus === "booked" && order.lalamoveTrackingLink && (
+  <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
+    <div className="flex items-center justify-between mb-3">
+      <span className="flex items-center gap-2 text-orange-700 font-bold text-sm">
+        <span className="relative flex h-3 w-3">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+        </span>
+        LIVE TRACKING ACTIVE
+      </span>
+    </div>
+    
+    <a
+      href={order.lalamoveTrackingLink}
+      target="_blank"
+      rel="noreferrer"
+      className="block w-full text-center bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg shadow-md transition-all active:transform active:scale-95"
+    >
+      📍 Track Driver on Map
+    </a>
+    
+    <p className="text-[10px] text-orange-400 mt-2 text-center uppercase tracking-widest font-mono">
+      Lalamove ID: {order.lalamoveBookingId}
+    </p>
+  </div>
+)}
               {/* Action Buttons */}
               <div className="mt-4 flex flex-col sm:flex-row gap-3">
                 <button
@@ -266,13 +300,33 @@ const rejectPayNow = async (id) => {
                 </button>
 
                 {order.fulfillmentType === "delivery" && (
-                  <button
-                    onClick={() => requestLalamoveBooking(order._id)}
-                    className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors flex-1"
-                  >
-                    Book Delivery
-                  </button>
-                )}
+  <button
+  disabled={
+    processingId === order._id || 
+    order.lalamoveStatus === "booked" || 
+    (order.paymentMethod === "paynow" && order.paymentStatus !== "paid")
+  }
+  onClick={() => requestLalamoveBooking(order._id)}
+  className={`px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors flex-1 
+    ${order.paymentStatus !== "paid" && order.paymentMethod === "paynow" 
+      ? "bg-gray-400 cursor-not-allowed" 
+      : order.lalamoveStatus === "booked"
+      ? "bg-green-600"
+      : "bg-blue-600 hover:bg-blue-700"
+    }`}
+>
+  {processingId === order._id ? (
+    <span className="flex items-center justify-center gap-2">
+      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+      Booking...
+    </span>
+  ) : order.lalamoveStatus === "booked" ? (
+    "✅ Order Booked"
+  ) : (
+    "Book Delivery"
+  )}
+</button>
+)}
               </div>
 
             <p className="text-sm mt-2">
@@ -313,7 +367,8 @@ const rejectPayNow = async (id) => {
 )}
 
 {order.paymentMethod === "paynow" &&
-  order.paymentStatus === "pending" && (
+  ["pending", "pending_verification"].includes(order.paymentStatus) && (
+
     <div className="flex gap-2 mt-3">
       <button
   disabled={processingId === order._id}
