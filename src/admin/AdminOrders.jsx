@@ -1,5 +1,3 @@
-
-
 import { useEffect, useState } from "react";
 import axios from "axios";
 
@@ -9,7 +7,6 @@ const AdminOrders = () => {
 
   const [orders, setOrders] = useState([]);
   const [processingId, setProcessingId] = useState(null);
-
 
   useEffect(() => {
     axios
@@ -34,7 +31,7 @@ const AdminOrders = () => {
       await axios.put(
         `${BACKEND_URL}/api/orders/${id}/status`,
         { status: "preparing" },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       refreshOrders();
     } catch (err) {
@@ -43,62 +40,158 @@ const AdminOrders = () => {
   };
 
   const requestLalamoveBooking = async (id) => {
-  setProcessingId(id); // Set loading state
-  try {
-    const res = await axios.put(
-      `${BACKEND_URL}/api/orders/${id}/lalamove/request`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    
-    // ✅ ADD NOTIFICATION
-    alert("🚀 Lalamove Booked Successfully!");
-    
-    refreshOrders();
-  } catch (err) {
-    alert(err.response?.data?.message || "Failed to request Lalamove booking");
-  } finally {
-    setProcessingId(null); // Clear loading state
-  }
-};
+    setProcessingId(id); // Set loading state
+    try {
+      const res = await axios.put(
+        `${BACKEND_URL}/api/orders/${id}/lalamove/request`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      // ✅ ADD NOTIFICATION
+      alert("🚀 Lalamove Booked Successfully!");
+
+      refreshOrders();
+    } catch (err) {
+      alert(
+        err.response?.data?.message || "Failed to request Lalamove booking",
+      );
+    } finally {
+      setProcessingId(null); // Clear loading state
+    }
+  };
+
+  const printInvoice = (order) => {
+    console.log("PRINT CLICKED", order);
+
+    const printWindow = window.open("", "_blank");
+
+    if (!printWindow) {
+      alert("Popup blocked — allow popups");
+      return;
+    }
+
+    const address =
+      order.fulfillmentType === "delivery"
+        ? `${order.deliveryAddress?.addressText || ""} 
+         ${order.deliveryAddress?.postalCode || ""}`
+        : order.pickupLocation?.address || "";
+
+    const itemsHTML = (order.items || [])
+      .map(
+        (item) => `
+      <tr>
+        <td>${item.name || item.productId?.name || "Item"}</td>
+        <td>${item.qty || 1}</td>
+        <td>$${item.price || 0}</td>
+      </tr>
+    `,
+      )
+      .join("");
+
+    const html = `
+  <html>
+  <head>
+    <title>Invoice</title>
+    <style>
+      body { font-family: Arial; padding:40px }
+      table { width:100%; border-collapse: collapse; margin-top:20px }
+      th,td { padding:10px; border-bottom:1px solid #ddd }
+      .total { text-align:right; margin-top:20px; font-weight:bold }
+    </style>
+  </head>
+
+  <body>
+    <h2>ONE18 Bakery</h2>
+    <p><b>Order:</b> ${order._id}</p>
+    <p><b>Date:</b> ${order.fulfillmentDate}</p>
+    <p><b>Time:</b> ${order.fulfillmentTime}</p>
+
+    <hr/>
+
+    <p>
+      <b>Customer:</b><br/>
+      ${order.customer?.firstName || ""} ${order.customer?.lastName || ""}<br/>
+      ${order.customer?.phone || ""}
+    </p>
+
+    <p>
+      <b>${order.fulfillmentType.toUpperCase()} Address:</b><br/>
+      ${address}
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Qty</th>
+          <th>Price</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHTML}
+      </tbody>
+    </table>
+
+    <div class="total">
+      Subtotal: $${order.subtotal || 0}<br/>
+      Delivery: $${order.deliveryFee || 0}<br/>
+      Total: $${order.totalAmount || 0}
+    </div>
+
+    <script>
+      window.onload = function(){
+        setTimeout(function(){
+          window.print();
+          window.close();
+        }, 300);
+      }
+    </script>
+
+  </body>
+  </html>
+  `;
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
 
   const acceptPayNow = async (id) => {
-  if (processingId === id) return;
+    if (processingId === id) return;
 
-  try {
-    setProcessingId(id);
+    try {
+      setProcessingId(id);
 
-    await axios.put(
-      `${BACKEND_URL}/api/payment/paynow/${id}/accept`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+      await axios.put(
+        `${BACKEND_URL}/api/payment/paynow/${id}/accept`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
 
-    refreshOrders();
-  } finally {
-    setProcessingId(null);
-  }
-};
+      refreshOrders();
+    } finally {
+      setProcessingId(null);
+    }
+  };
 
+  const rejectPayNow = async (id) => {
+    if (processingId === id) return;
 
-const rejectPayNow = async (id) => {
-  if (processingId === id) return;
+    try {
+      setProcessingId(id);
 
-  try {
-    setProcessingId(id);
+      await axios.put(
+        `${BACKEND_URL}/api/payment/paynow/${id}/reject`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
 
-    await axios.put(
-      `${BACKEND_URL}/api/payment/paynow/${id}/reject`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    refreshOrders();
-  } finally {
-    setProcessingId(null);
-  }
-};
-
+      refreshOrders();
+    } finally {
+      setProcessingId(null);
+    }
+  };
 
   return (
     <div className="p-4 sm:p-6">
@@ -138,13 +231,12 @@ const rejectPayNow = async (id) => {
                 </div>
               </div>
               {order.branch && (
-  <div className="text-sm mb-3 bg-purple-50 p-3 rounded-lg">
-    <p className="font-semibold mb-1">🏬 Branch</p>
-    <p>{order.branch.name}</p>
-    <p className="text-gray-600">{order.branch.address}</p>
-  </div>
-)}
-
+                <div className="text-sm mb-3 bg-purple-50 p-3 rounded-lg">
+                  <p className="font-semibold mb-1">🏬 Branch</p>
+                  <p>{order.branch.name}</p>
+                  <p className="text-gray-600">{order.branch.address}</p>
+                </div>
+              )}
 
               {/* Date & Time */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
@@ -263,134 +355,149 @@ const rejectPayNow = async (id) => {
               </div>
 
               {/* Lalamove Live Tracking UI */}
-{/* After a successful booking, show the tracking link directly on the card */}
-{order.lalamoveStatus === "booked" && order.lalamoveTrackingLink && (
-  <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
-    <div className="flex items-center justify-between mb-3">
-      <span className="flex items-center gap-2 text-orange-700 font-bold text-sm">
-        <span className="relative flex h-3 w-3">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
-        </span>
-        LIVE TRACKING ACTIVE
-      </span>
-    </div>
-    
-    <a
-      href={order.lalamoveTrackingLink}
-      target="_blank"
-      rel="noreferrer"
-      className="block w-full text-center bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg shadow-md transition-all active:transform active:scale-95"
-    >
-      📍 Track Driver on Map
-    </a>
-    
-    <p className="text-[10px] text-orange-400 mt-2 text-center uppercase tracking-widest font-mono">
-      Lalamove ID: {order.lalamoveBookingId}
-    </p>
-  </div>
-)}
+              {/* After a successful booking, show the tracking link directly on the card */}
+              {order.lalamoveStatus === "booked" &&
+                order.lalamoveTrackingLink && (
+                  <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="flex items-center gap-2 text-orange-700 font-bold text-sm">
+                        <span className="relative flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+                        </span>
+                        LIVE TRACKING ACTIVE
+                      </span>
+                    </div>
+
+                    <a
+                      href={order.lalamoveTrackingLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block w-full text-center bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg shadow-md transition-all active:transform active:scale-95"
+                    >
+                      📍 Track Driver on Map
+                    </a>
+
+                    <p className="text-[10px] text-orange-400 mt-2 text-center uppercase tracking-widest font-mono">
+                      Lalamove ID: {order.lalamoveBookingId}
+                    </p>
+                  </div>
+                )}
               {/* Action Buttons */}
-              <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={() => activateOrder(order._id)}
-                  className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors flex-1"
-                >
-                  Activate Order
-                </button>
-
-                {order.fulfillmentType === "delivery" && (
+             
+              {/* Action Buttons */}
+<div className="mt-4 flex flex-col sm:flex-row gap-3 relative z-10">
+  {/* Activate Order Button */}
   <button
-  disabled={
-    processingId === order._id || 
-    order.lalamoveStatus === "booked" || 
-    (order.paymentMethod === "paynow" && order.paymentStatus !== "paid")
-  }
-  onClick={() => requestLalamoveBooking(order._id)}
-  className={`px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors flex-1 
-    ${order.paymentStatus !== "paid" && order.paymentMethod === "paynow" 
-      ? "bg-gray-400 cursor-not-allowed" 
-      : order.lalamoveStatus === "booked"
-      ? "bg-green-600"
-      : "bg-blue-600 hover:bg-blue-700"
-    }`}
->
-  {processingId === order._id ? (
-    <span className="flex items-center justify-center gap-2">
+    onClick={() => activateOrder(order._id)}
+    disabled={order.status === "preparing" || order.status === "completed"}
+    className={`px-4 py-2 rounded-lg text-white text-sm font-medium transition-all flex-1 flex items-center justify-center gap-2 shadow-sm active:scale-95
+      ${order.status === "preparing" || order.status === "completed"
+        ? "bg-gray-400 cursor-not-allowed"
+        : "bg-green-600 hover:bg-green-700 cursor-pointer"
+      }`}
+  >
+    {processingId === order._id && (
       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-      Booking...
-    </span>
-  ) : order.lalamoveStatus === "booked" ? (
-    "✅ Order Booked"
-  ) : (
-    "Book Delivery"
+    )}
+    {order.status === "preparing" || order.status === "completed" 
+      ? "✅ Activated" 
+      : "Activate Order"}
+  </button>
+
+  {/* Print Invoice Button */}
+  <button
+    onClick={() => printInvoice(order)}
+    className="px-4 py-2 rounded-lg bg-gray-800 text-white text-sm font-medium hover:bg-black transition-all flex-1 flex items-center justify-center gap-2 shadow-sm active:scale-95 cursor-pointer"
+  >
+    <span>🖨️</span> Print Invoice
+  </button>
+
+  {/* Lalamove Button - Already responsive, keeping as is */}
+  {order.fulfillmentType === "delivery" && (
+    <button
+      disabled={
+        processingId === order._id || 
+        order.lalamoveStatus === "booked" || 
+        (order.paymentMethod === "paynow" && order.paymentStatus !== "paid")
+      }
+      onClick={() => requestLalamoveBooking(order._id)}
+      className={`w-full px-4 py-3 rounded-lg text-white text-sm font-bold transition-all shadow-md flex items-center justify-center gap-2
+        ${order.paymentStatus !== "paid" && order.paymentMethod === "paynow" 
+          ? "bg-gray-400 cursor-not-allowed" 
+          : order.lalamoveStatus === "booked"
+          ? "bg-purple-600"
+          : "bg-blue-600 hover:bg-blue-700 active:scale-95"
+        }`}
+    >
+      {processingId === order._id ? (
+        <>
+          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+          Booking Lalamove...
+        </>
+      ) : order.lalamoveStatus === "booked" ? (
+        "✅ Lalamove Booked"
+      ) : (
+        "🚀 Book Lalamove Delivery"
+      )}
+    </button>
   )}
-</button>
-)}
-              </div>
+</div>
 
-            <p className="text-sm mt-2">
-  💳 {order.paymentMethod?.toUpperCase()} •
-
-  <span
-    className={`ml-2 px-2 py-1 rounded text-xs font-semibold
+              <p className="text-sm mt-2">
+                💳 {order.paymentMethod?.toUpperCase()} •
+                <span
+                  className={`ml-2 px-2 py-1 rounded text-xs font-semibold
       ${
         order.paymentStatus === "paid"
           ? "bg-green-100 text-green-700"
           : order.paymentStatus === "rejected"
-          ? "bg-red-100 text-red-700"
-          : "bg-yellow-100 text-yellow-700"
+            ? "bg-red-100 text-red-700"
+            : "bg-yellow-100 text-yellow-700"
       }
     `}
-  >
-    {order.paymentStatus.toUpperCase()}
-  </span>
-</p>
+                >
+                  {order.paymentStatus.toUpperCase()}
+                </span>
+              </p>
 
+              {order.paymentMethod === "paynow" && order.paymentProof && (
+                <div className="mt-4">
+                  <p className="font-medium mb-2">Payment Proof</p>
+                  <a href={order.paymentProof} target="_blank" rel="noreferrer">
+                    <img
+                      src={order.paymentProof}
+                      alt="Payment proof"
+                      className="w-full max-h-40 object-cover rounded-lg border"
+                    />
+                  </a>
+                </div>
+              )}
 
-{order.paymentMethod === "paynow" && order.paymentProof && (
-  <div className="mt-4">
-    <p className="font-medium mb-2">Payment Proof</p>
-    <a
-      href={order.paymentProof}
-      target="_blank"
-      rel="noreferrer"
-    >
-      <img
-  src={order.paymentProof}
-  alt="Payment proof"
-  className="w-full max-h-40 object-cover rounded-lg border"
-/>
+              {order.paymentMethod === "paynow" &&
+                ["pending", "pending_verification"].includes(
+                  order.paymentStatus,
+                ) && (
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      disabled={processingId === order._id}
+                      onClick={() => acceptPayNow(order._id)}
+                      className="flex-1 bg-green-600 text-white py-2 rounded disabled:opacity-50"
+                    >
+                      {processingId === order._id
+                        ? "Processing..."
+                        : "Accept Payment"}
+                    </button>
 
-    </a>
-  </div>
-)}
-
-{order.paymentMethod === "paynow" &&
-  ["pending", "pending_verification"].includes(order.paymentStatus) && (
-
-    <div className="flex gap-2 mt-3">
-      <button
-  disabled={processingId === order._id}
-  onClick={() => acceptPayNow(order._id)}
-  className="flex-1 bg-green-600 text-white py-2 rounded disabled:opacity-50"
->
-  {processingId === order._id ? "Processing..." : "Accept Payment"}
-</button>
-
-<button
-  disabled={processingId === order._id}
-  onClick={() => rejectPayNow(order._id)}
-  className="flex-1 bg-red-600 text-white py-2 rounded disabled:opacity-50"
->
-  Reject Payment
-</button>
-
-    </div>
-)}
-
-
-
+                    <button
+                      disabled={processingId === order._id}
+                      onClick={() => rejectPayNow(order._id)}
+                      className="flex-1 bg-red-600 text-white py-2 rounded disabled:opacity-50"
+                    >
+                      Reject Payment
+                    </button>
+                  </div>
+                )}
             </div>
           ))}
         </div>
