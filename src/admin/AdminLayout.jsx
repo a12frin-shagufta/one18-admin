@@ -140,6 +140,14 @@ const AdminLayout = () => {
           >
             🗂 Subcategories
           </NavLink>
+
+          <NavLink
+            to="/admin/newsletter"
+            className={linkClass}
+            onClick={closeSidebar}
+          >
+            🗂 Newsletter
+          </NavLink>
         </nav>
 
         {/* LOGOUT BUTTON (Desktop sidebar) */}

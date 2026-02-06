@@ -14,6 +14,7 @@ import AdminCategory from "./admin/AdminCategory";
 import AdminSubcategory from "./admin/AdminSubcategory";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import AdminNewsletter from "./admin/AdminNewsletter";
 
 
 function App() {
@@ -57,6 +58,7 @@ function App() {
         <Route index element={<Navigate to="menu" replace />} />
 
         <Route path="menu" element={<AdminMenu />} />
+                <Route path="newsletter" element={<AdminNewsletter />} />
         <Route path="list" element={<AdminList />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="edit/:id" element={<EditMenu />} />
