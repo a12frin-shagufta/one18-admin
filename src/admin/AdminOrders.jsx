@@ -26,6 +26,11 @@ const AdminOrders = () => {
     setOrders(res.data);
   };
 
+  //remove decimal
+const money = (n) => Math.round(Number(n || 0));
+
+
+
   const activateOrder = async (id) => {
     try {
       await axios.put(
@@ -72,10 +77,14 @@ const AdminOrders = () => {
     }
 
     const address =
-      order.fulfillmentType === "delivery"
-        ? `${order.deliveryAddress?.addressText || ""} 
-         ${order.deliveryAddress?.postalCode || ""}`
-        : order.pickupLocation?.address || "";
+  order.fulfillmentType === "delivery"
+    ? `
+      ${order.customer?.address || ""}<br/>
+      ${order.customer?.apartment ? "Apt: " + order.customer.apartment + "<br/>" : ""}
+      Postal Code: ${order.customer?.postalCode || ""}
+    `
+    : order.pickupLocation?.address || "";
+
 
     const itemsHTML = (order.items || [])
       .map(
@@ -83,7 +92,8 @@ const AdminOrders = () => {
       <tr>
         <td>${item.name || item.productId?.name || "Item"}</td>
         <td>${item.qty || 1}</td>
-        <td>$${item.price || 0}</td>
+        <td>$${money(item.price)}</td>
+
       </tr>
     `,
       )
@@ -109,16 +119,20 @@ const AdminOrders = () => {
 
     <hr/>
 
-    <p>
-      <b>Customer:</b><br/>
-      ${order.customer?.firstName || ""} ${order.customer?.lastName || ""}<br/>
-      ${order.customer?.phone || ""}
-    </p>
+<p>
+  <b>Customer:</b><br/>
+  ${order.customer?.firstName || ""} ${order.customer?.lastName || ""}<br/>
+  Phone: ${order.customer?.phone || ""}<br/>
+  ${order.customer?.company ? "Company: " + order.customer.company + "<br/>" : ""}
+</p>
 
-    <p>
-      <b>${order.fulfillmentType.toUpperCase()} Address:</b><br/>
-      ${address}
-    </p>
+<p>
+  <b>${order.fulfillmentType.toUpperCase()} Address:</b><br/>
+  ${address}
+</p>
+
+
+
 
     <table>
       <thead>
@@ -134,9 +148,9 @@ const AdminOrders = () => {
     </table>
 
     <div class="total">
-      Subtotal: $${order.subtotal || 0}<br/>
-      Delivery: $${order.deliveryFee || 0}<br/>
-      Total: $${order.totalAmount || 0}
+      Subtotal: $${money(order.subtotal)}<br/>
+      Delivery: $${money(order.deliveryFee)}<br/>
+      Total: $${money(order.totalAmount)}
     </div>
 
     <script>
@@ -339,19 +353,22 @@ const AdminOrders = () => {
               {/* Totals */}
               <div className="border-t pt-4">
                 <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">Subtotal</span>
-                  <span className="text-sm">${order.subtotal || 0}</span>
-                </div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">Delivery Fee</span>
-                  <span className="text-sm">${order.deliveryFee || 0}</span>
-                </div>
-                <div className="flex justify-between items-center pt-2 border-t">
-                  <span className="text-lg font-bold">Total</span>
-                  <span className="text-lg font-bold">
-                    ${order.totalAmount || 0}
-                  </span>
-                </div>
+  <span className="text-sm font-medium">Subtotal</span>
+  <span className="text-sm">${money(order.subtotal)}</span>
+</div>
+
+<div className="flex justify-between mb-2">
+  <span className="text-sm font-medium">Delivery Fee</span>
+  <span className="text-sm">${money(order.deliveryFee)}</span>
+</div>
+
+<div className="flex justify-between items-center pt-2 border-t">
+  <span className="text-lg font-bold">Total</span>
+  <span className="text-lg font-bold">
+    ${money(order.totalAmount)}
+  </span>
+</div>
+
               </div>
 
               {/* Lalamove Live Tracking UI */}
