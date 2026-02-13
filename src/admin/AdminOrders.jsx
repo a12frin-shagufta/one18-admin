@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { formatMoney, CURRENCY, money } from "../utils/currency";
+
 
 const AdminOrders = () => {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
@@ -27,7 +29,7 @@ const AdminOrders = () => {
   };
 
   //remove decimal
-const money = (n) => Math.round(Number(n || 0));
+
 
 
 
@@ -92,7 +94,8 @@ const money = (n) => Math.round(Number(n || 0));
       <tr>
         <td>${item.name || item.productId?.name || "Item"}</td>
         <td>${item.qty || 1}</td>
-        <td>$${money(item.price)}</td>
+        <td>${CURRENCY}${money(item.price)}</td>
+
 
       </tr>
     `,
@@ -149,9 +152,11 @@ const money = (n) => Math.round(Number(n || 0));
     </table>
 
     <div class="total">
-      Subtotal: $${money(order.subtotal)}<br/>
-      Delivery: $${money(order.deliveryFee)}<br/>
-      Total: $${money(order.totalAmount)}
+  {formatMoney(order.subtotal)}
+{formatMoney(order.deliveryFee)}
+{formatMoney(order.totalAmount)}
+
+
     </div>
 
     <script>
@@ -398,7 +403,8 @@ const money = (n) => Math.round(Number(n || 0));
               <div className="border-t pt-4">
                 <div className="flex justify-between mb-2">
   <span className="text-sm font-medium">Subtotal</span>
-  <span className="text-sm">${money(order.subtotal)}</span>
+<span className="text-sm">{formatMoney(order.subtotal)}</span>
+
 </div>
 
 <div className="flex justify-between mb-2">
@@ -409,7 +415,7 @@ const money = (n) => Math.round(Number(n || 0));
 <div className="flex justify-between items-center pt-2 border-t">
   <span className="text-lg font-bold">Total</span>
   <span className="text-lg font-bold">
-    ${money(order.totalAmount)}
+    {formatMoney(order.totalAmount)}
   </span>
 </div>
 
