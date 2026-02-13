@@ -263,14 +263,19 @@ const money = (n) => Math.round(Number(n || 0));
               {/* Header */}
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
                 <div>
-                  <p className="text-xs text-gray-500">
-  Order: {order.orderNumber || order._id}
-</p>
+  <p className="text-xs text-gray-500">
+    Order: {order.orderNumber || order._id}
+  </p>
 
-                  <p className="text-sm text-gray-600">
-                    📞 {order.customer?.phone || "-"}
-                  </p>
-                </div>
+  <p className="font-semibold text-lg">
+    {order.customer?.firstName} {order.customer?.lastName}
+  </p>
+
+  <p className="text-sm text-gray-600">
+    📞 {order.customer?.phone || "-"}
+  </p>
+</div>
+
 
                 <div className="flex flex-col sm:items-end gap-2">
                   <span className="px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-700 font-medium self-start sm:self-auto">
