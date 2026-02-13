@@ -113,7 +113,8 @@ const money = (n) => Math.round(Number(n || 0));
 
   <body>
     <h2>ONE18 Bakery</h2>
-    <p><b>Order:</b> ${order._id}</p>
+   <p><b>Order:</b> ${order.orderNumber || order._id}</p>
+
     <p><b>Date:</b> ${order.fulfillmentDate}</p>
     <p><b>Time:</b> ${order.fulfillmentTime}</p>
 
@@ -207,9 +208,46 @@ const money = (n) => Math.round(Number(n || 0));
     }
   };
 
+  const downloadPaymentReport = async () => {
+  try {
+    const res = await axios.get(
+      `${BACKEND_URL}/api/payment/payment-report`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        responseType: "blob", // important
+      }
+    );
+
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "payment-report.xlsx");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+  } catch (err) {
+    alert("Failed to download report");
+    console.error(err);
+  }
+};
+
+
   return (
     <div className="p-4 sm:p-6">
-      <h1 className="text-2xl font-semibold mb-6">Orders</h1>
+<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+  <h1 className="text-2xl font-semibold">Orders</h1>
+
+  <button
+    onClick={downloadPaymentReport}
+    className="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 active:scale-95 transition text-sm font-medium"
+  >
+    📊 Download Payment Excel
+  </button>
+</div>
+
 
       {orders.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-xl shadow-sm">
@@ -225,9 +263,10 @@ const money = (n) => Math.round(Number(n || 0));
               {/* Header */}
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
                 <div>
-                  <p className="font-semibold text-lg">
-                    {order.customer?.firstName} {order.customer?.lastName}
-                  </p>
+                  <p className="text-xs text-gray-500">
+  Order: {order.orderNumber || order._id}
+</p>
+
                   <p className="text-sm text-gray-600">
                     📞 {order.customer?.phone || "-"}
                   </p>
@@ -501,7 +540,8 @@ const money = (n) => Math.round(Number(n || 0));
                       onClick={() => acceptPayNow(order._id)}
                       className="flex-1 bg-green-600 text-white py-2 rounded disabled:opacity-50"
                     >
-                      {processingId === order._id
+                      {processingId === order.orderNumber || order._id
+
                         ? "Processing..."
                         : "Accept Payment"}
                     </button>
