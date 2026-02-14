@@ -1,7 +1,7 @@
 export const CURRENCY = "S$";
 
 export const money = (n) => {
-  return Math.round(Number(n || 0));
+return Number(n || 0).toFixed(2);
 };
 
 export const formatMoney = (n) => {
