@@ -286,9 +286,11 @@ const markPaidManually = async (id) => {
         <thead className="bg-gray-100 text-gray-600">
           <tr>
             <th className="p-4 text-left">Customer</th>
-            <th className="p-4 text-left">Method</th>
+      <th className="p-4 text-left">Method</th>
+<th className="p-4 text-left">Date</th>
+<th className="p-4 text-left">Time</th>
+<th className="p-4 text-left">Payment</th>
 
-            <th className="p-4 text-left">Payment</th>
             <th className="p-4 text-left">Email</th>
             <th className="p-4 text-left">Phone</th>
             <th className="p-4 text-left">Postal</th>
@@ -317,6 +319,7 @@ const markPaidManually = async (id) => {
 
               {/* Branch */}
           {/* Method */}
+{/* Method */}
 <td className="p-4">
   <span className={`px-2 py-1 rounded-full text-xs font-semibold
     ${order.fulfillmentType === "delivery"
@@ -326,6 +329,17 @@ const markPaidManually = async (id) => {
     {order.fulfillmentType === "delivery" ? "Delivery" : "Pickup"}
   </span>
 </td>
+
+{/* Date */}
+<td className="p-4 text-sm">
+  {order.fulfillmentDate || "-"}
+</td>
+
+{/* Time */}
+<td className="p-4 text-sm">
+  {order.fulfillmentTime || "-"}
+</td>
+
 
 
               {/* Payment */}
@@ -393,6 +407,23 @@ const markPaidManually = async (id) => {
         </div>
         <button onClick={() => setSelectedOrder(null)}>✕</button>
       </div>
+      {/* Date & Time */}
+<div className="grid grid-cols-2 gap-4 mb-4">
+  <div className="bg-gray-50 p-3 rounded-lg">
+    <p className="text-xs text-gray-500">Date</p>
+    <p className="font-semibold">
+      {selectedOrder.fulfillmentDate || "-"}
+    </p>
+  </div>
+
+  <div className="bg-gray-50 p-3 rounded-lg">
+    <p className="text-xs text-gray-500">Time</p>
+    <p className="font-semibold">
+      {selectedOrder.fulfillmentTime || "-"}
+    </p>
+  </div>
+</div>
+
 
       {/* Method + Lalamove */}
       <div className="flex gap-3 mb-4">
