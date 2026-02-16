@@ -33,6 +33,30 @@ const AdminOrders = () => {
   //remove decimal
 
 
+  const refundOrder = async (id) => {
+  if (processingId === id) return;
+  if (!window.confirm("Refund this order?")) return;
+
+  try {
+    setProcessingId(id);
+
+    await axios.post(
+      `${BACKEND_URL}/api/payment/refund/${id}`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    alert("✅ Refund successful");
+    await refreshOrders();
+    setSelectedOrder(null);
+
+  } catch (err) {
+    alert(err.response?.data?.message || "Refund failed");
+  } finally {
+    setProcessingId(null);
+  }
+};
+
 
 
   const activateOrder = async (id) => {
@@ -48,27 +72,27 @@ const AdminOrders = () => {
     }
   };
 
-  const requestLalamoveBooking = async (id) => {
-    setProcessingId(id); // Set loading state
-    try {
-      const res = await axios.put(
-        `${BACKEND_URL}/api/orders/${id}/lalamove/request`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+  // const requestLalamoveBooking = async (id) => {
+  //   setProcessingId(id); // Set loading state
+  //   try {
+  //     const res = await axios.put(
+  //       `${BACKEND_URL}/api/orders/${id}/lalamove/request`,
+  //       {},
+  //       { headers: { Authorization: `Bearer ${token}` } },
+  //     );
 
-      // ✅ ADD NOTIFICATION
-      alert("🚀 Lalamove Booked Successfully!");
+  //     // ✅ ADD NOTIFICATION
+  //     alert("🚀 Lalamove Booked Successfully!");
 
-      refreshOrders();
-    } catch (err) {
-      alert(
-        err.response?.data?.message || "Failed to request Lalamove booking",
-      );
-    } finally {
-      setProcessingId(null); // Clear loading state
-    }
-  };
+  //     refreshOrders();
+  //   } catch (err) {
+  //     alert(
+  //       err.response?.data?.message || "Failed to request Lalamove booking",
+  //     );
+  //   } finally {
+  //     setProcessingId(null); // Clear loading state
+  //   }
+  // };
 
   const printInvoice = (order) => {
     console.log("PRINT CLICKED", order);
@@ -129,6 +153,7 @@ const AdminOrders = () => {
   <b>Customer:</b><br/>
   ${order.customer?.firstName || ""} ${order.customer?.lastName || ""}<br/>
   Phone: ${order.customer?.phone || ""}<br/>
+  email: ${order.customer?.email || ""}<br/>
   ${order.customer?.company ? "Company: " + order.customer.company + "<br/>" : ""}
 </p>
 
@@ -154,12 +179,11 @@ const AdminOrders = () => {
     </table>
 
     <div class="total">
-  {formatMoney(order.subtotal)}
-{formatMoney(order.deliveryFee)}
-{formatMoney(order.totalAmount)}
+  Subtotal: ${CURRENCY}${money(order.subtotal)}<br/>
+  Delivery: ${CURRENCY}${money(order.deliveryFee || 0)}<br/>
+  Total: ${CURRENCY}${money(order.totalAmount)}
+</div>
 
-
-    </div>
 
     <script>
       window.onload = function(){
@@ -509,6 +533,19 @@ const markPaidManually = async (id) => {
           Activate
         </button>
 
+
+       
+<button
+  disabled={processingId === selectedOrder._id}
+  onClick={() => refundOrder(selectedOrder._id)}
+  className="bg-red-600 text-white py-2 rounded disabled:opacity-50"
+>
+  Refund
+</button>
+
+
+
+
         <button
           onClick={() => printInvoice(selectedOrder)}
           className="bg-gray-800 text-white py-2 rounded"
@@ -516,14 +553,7 @@ const markPaidManually = async (id) => {
           Print
         </button>
 
-        {selectedOrder.fulfillmentType === "delivery" && (
-          <button
-            onClick={() => requestLalamoveBooking(selectedOrder._id)}
-            className="bg-blue-600 text-white py-2 rounded"
-          >
-            Book Lalamove
-          </button>
-        )}
+     
 
         {selectedOrder.paymentStatus !== "paid" && (
   <button
