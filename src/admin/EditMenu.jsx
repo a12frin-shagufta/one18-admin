@@ -19,7 +19,7 @@ const EditMenu = () => {
   const [existingImages, setExistingImages] = useState([]);
   const [images, setImages] = useState([]);
   const [isBestSeller, setIsBestSeller] = useState(false);
-  const [inStock, setInStock] = useState(true);
+
   const [loading, setLoading] = useState(false);
   const [description, setDescription] = useState("");
   const [servingInfo, setServingInfo] = useState("");
@@ -30,7 +30,7 @@ const EditMenu = () => {
   const [subcategoryId, setSubcategoryId] = useState("");
   const [festivals, setFestivals] = useState([]);
   const [festivalId, setFestivalId] = useState("");
-
+const [stock, setStock] = useState(0);
   const [branches, setBranches] = useState([]);
   const [selectedBranches, setSelectedBranches] = useState([]);
 
@@ -88,7 +88,7 @@ const EditMenu = () => {
           item.variants?.length ? item.variants : [{ label: "", price: "" }]
         );
         setIsBestSeller(!!item.isBestSeller);
-        setInStock(item.inStock !== false);
+        setStock(item.stock || 0);
         setExistingImages(item.images || []);
         setSelectedBranches(item.branches || []);
 
@@ -204,7 +204,7 @@ const EditMenu = () => {
     data.append("category", categoryId);
     data.append("variants", JSON.stringify(cleanedVariants));
     data.append("isBestSeller", isBestSeller);
-    data.append("inStock", inStock);
+data.append("stock", stock);
     data.append("removedImages", JSON.stringify(removedImages || []));
     data.append("branches", JSON.stringify(selectedBranches));
     data.append(
@@ -420,7 +420,7 @@ const EditMenu = () => {
                     </div>
                   </label>
 
-                  <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition">
+                  {/* <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition">
                     <input
                       type="checkbox"
                       checked={inStock}
@@ -433,7 +433,19 @@ const EditMenu = () => {
                         Available for order
                       </p>
                     </div>
-                  </label>
+                  </label> */}
+                  <div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Stock Quantity *
+  </label>
+  <input
+    type="number"
+    min="0"
+    value={stock}
+    onChange={(e) => setStock(e.target.value)}
+    className="w-full border border-gray-300 rounded-lg px-4 py-3"
+  />
+</div>
                 </div>
               </div>
             </div>

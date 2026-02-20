@@ -10,7 +10,7 @@ const AdminMenu = () => {
   const [variants, setVariants] = useState([{ label: "", price: "" }]);
   const [images, setImages] = useState([]);
   const [isBestSeller, setIsBestSeller] = useState(false);
-  const [inStock, setInStock] = useState(true);
+  const [stock, setStock] = useState(0);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
@@ -144,7 +144,7 @@ const AdminMenu = () => {
     data.append("subcategory", subcategoryId);
     data.append("variants", JSON.stringify(cleanedVariants));
     data.append("isBestSeller", isBestSeller);
-    data.append("inStock", inStock);
+data.append("stock", stock);
     if (festivalId) data.append("festival", festivalId);
     data.append("branches", JSON.stringify(selectedBranches));
     data.append(
@@ -176,11 +176,12 @@ const AdminMenu = () => {
       setSelectedBranches([]);
       setPreorderEnabled(false);
       setMinDays(0);
+      setStock(0);
       setPrepaidRequired(false);
       setVariants([{ label: "", price: "" }]);
       setImages([]);
       setIsBestSeller(false);
-      setInStock(true);
+     
       setFestivalId("");
       setActiveSection("basic");
     } catch (err) {
@@ -378,7 +379,7 @@ const AdminMenu = () => {
                       </div>
                     </label>
 
-                    <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition">
+                    {/* <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition">
                       <input
                         type="checkbox"
                         checked={inStock}
@@ -393,7 +394,20 @@ const AdminMenu = () => {
                           Available for order
                         </p>
                       </div>
-                    </label>
+                    </label> */}
+                    <div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Stock Quantity *
+  </label>
+  <input
+    type="number"
+    min="0"
+    value={stock}
+    onChange={(e) => setStock(e.target.value)}
+    required
+    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+  />
+</div>
                   </div>
                 </div>
               </div>
