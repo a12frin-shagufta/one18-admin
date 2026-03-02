@@ -63,6 +63,27 @@ const AdminMenu = () => {
     }
   }, [categoryId]);
 
+  // drag images
+  const moveImage = (index, direction) => {
+    const newImages = [...images];
+
+    if (direction === "left" && index > 0) {
+      [newImages[index - 1], newImages[index]] = [
+        newImages[index],
+        newImages[index - 1],
+      ];
+    }
+
+    if (direction === "right" && index < images.length - 1) {
+      [newImages[index + 1], newImages[index]] = [
+        newImages[index],
+        newImages[index + 1],
+      ];
+    }
+
+    setImages(newImages);
+  };
+
   const handleImageSelect = (e) => {
     const files = Array.from(e.target.files);
     if (images.length + files.length > MAX_IMAGES) {
@@ -95,7 +116,7 @@ const AdminMenu = () => {
     setSelectedBranches((prev) =>
       prev.includes(branchId)
         ? prev.filter((id) => id !== branchId)
-        : [...prev, branchId]
+        : [...prev, branchId],
     );
   };
 
@@ -144,7 +165,7 @@ const AdminMenu = () => {
     data.append("subcategory", subcategoryId);
     data.append("variants", JSON.stringify(cleanedVariants));
     data.append("isBestSeller", isBestSeller);
-data.append("stock", stock);
+    data.append("stock", stock);
     if (festivalId) data.append("festival", festivalId);
     data.append("branches", JSON.stringify(selectedBranches));
     data.append(
@@ -153,7 +174,7 @@ data.append("stock", stock);
         enabled: preorderEnabled,
         minDays,
         prepaidRequired,
-      })
+      }),
     );
     images.forEach((img) => data.append("images", img));
 
@@ -181,7 +202,7 @@ data.append("stock", stock);
       setVariants([{ label: "", price: "" }]);
       setImages([]);
       setIsBestSeller(false);
-     
+
       setFestivalId("");
       setActiveSection("basic");
     } catch (err) {
@@ -396,18 +417,18 @@ data.append("stock", stock);
                       </div>
                     </label> */}
                     <div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Stock Quantity *
-  </label>
-  <input
-    type="number"
-    min="0"
-    value={stock}
-    onChange={(e) => setStock(e.target.value)}
-    required
-    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-  />
-</div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Stock Quantity *
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={stock}
+                        onChange={(e) => setStock(e.target.value)}
+                        required
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -511,7 +532,9 @@ data.append("stock", stock);
                       {images.length < MAX_IMAGES && (
                         <label className="aspect-square border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
                           <FiPlus className="text-2xl text-gray-400 mb-2" />
-                          <span className="text-sm text-gray-500">Add Image</span>
+                          <span className="text-sm text-gray-500">
+                            Add Image
+                          </span>
                           <input
                             type="file"
                             accept="image/*"
@@ -524,32 +547,54 @@ data.append("stock", stock);
 
                       {/* Image Previews */}
                       {images.map((img, index) => (
-                        <div
-                          key={index}
-                          className="aspect-square relative rounded-xl overflow-hidden border group"
-                        >
-                          <img
-                            src={URL.createObjectURL(img)}
-                            alt={`Preview ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
+  <div
+    key={index}
+    className="aspect-square relative rounded-xl overflow-hidden border group"
+  >
+    <img
+      src={URL.createObjectURL(img)}
+      alt={`Preview ${index + 1}`}
+      className="w-full h-full object-cover"
+    />
 
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all" />
+    {/* Main Badge */}
+    {index === 0 && (
+      <div className="absolute top-2 left-2 bg-green-600 text-white text-xs px-2 py-1 rounded">
+        Main
+      </div>
+    )}
 
-                          {/* ✅ Bigger tap target for mobile */}
-                          <button
-                            type="button"
-                            onClick={() => removeImage(index)}
-                            className="absolute top-2 right-2 bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center text-sm active:scale-95 transition"
-                          >
-                            ✕
-                          </button>
+    {/* Move Buttons */}
+    <div className="absolute bottom-2 left-2 flex gap-2">
+      <button
+        type="button"
+        disabled={index === 0}
+        onClick={() => moveImage(index, "left")}
+        className="bg-black/70 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm disabled:opacity-40"
+      >
+        ←
+      </button>
 
-                          <div className="absolute bottom-2 left-2 right-2 text-xs text-white bg-black/60 rounded px-2 py-1 truncate">
-                            {img.name}
-                          </div>
-                        </div>
-                      ))}
+      <button
+        type="button"
+        disabled={index === images.length - 1}
+        onClick={() => moveImage(index, "right")}
+        className="bg-black/70 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm disabled:opacity-40"
+      >
+        →
+      </button>
+    </div>
+
+    {/* Delete Button */}
+    <button
+      type="button"
+      onClick={() => removeImage(index)}
+      className="absolute top-2 right-2 bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center text-sm"
+    >
+      ✕
+    </button>
+  </div>
+))}
                     </div>
 
                     <p className="text-sm text-gray-500 mt-3">
@@ -722,7 +767,8 @@ data.append("stock", stock);
                   <div className="flex justify-between">
                     <span className="text-gray-600">Category:</span>
                     <span className="font-medium">
-                      {categories.find((c) => c._id === categoryId)?.name || "-"}
+                      {categories.find((c) => c._id === categoryId)?.name ||
+                        "-"}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -735,7 +781,9 @@ data.append("stock", stock);
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Branches:</span>
-                    <span className="font-medium">{selectedBranches.length}</span>
+                    <span className="font-medium">
+                      {selectedBranches.length}
+                    </span>
                   </div>
                 </div>
               </div>

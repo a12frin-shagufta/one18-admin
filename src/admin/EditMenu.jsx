@@ -15,9 +15,11 @@ const EditMenu = () => {
   const [variants, setVariants] = useState([{ label: "", price: "" }]);
   const [removedImages, setRemovedImages] = useState([]);
   const token = localStorage.getItem("adminToken");
+  const [allImages, setAllImages] = useState([]);
 
-  const [existingImages, setExistingImages] = useState([]);
-  const [images, setImages] = useState([]);
+  // const [existingImages, setExistingImages] = useState([]);
+  // const [images, setImages] = useState([]);
+
   const [isBestSeller, setIsBestSeller] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -89,7 +91,12 @@ const [stock, setStock] = useState(0);
         );
         setIsBestSeller(!!item.isBestSeller);
         setStock(item.stock || 0);
-        setExistingImages(item.images || []);
+        setAllImages(
+  (item.images || []).map((img) => ({
+    type: "existing",
+    value: img,
+  }))
+);
         setSelectedBranches(item.branches || []);
 
         if (item.preorder?.enabled) {
@@ -129,12 +136,35 @@ const [stock, setStock] = useState(0);
   }, [categoryId]);
 
   // Image handlers
-  const handleImageSelect = (e) => {
-    const files = Array.from(e.target.files);
-    const remaining = MAX_IMAGES - existingImages.length;
+const handleImageSelect = (e) => {
+  const files = Array.from(e.target.files);
 
-    setImages((prev) => [...prev, ...files].slice(0, remaining));
-  };
+  const remaining = MAX_IMAGES - allImages.length;
+  const allowedFiles = files.slice(0, remaining);
+
+  const newItems = allowedFiles.map((file) => ({
+    type: "new",
+    value: file,
+  }));
+
+  setAllImages((prev) => [...prev, ...newItems]);
+};
+
+const moveImage = (index, direction) => {
+  const updated = [...allImages];
+
+  if (direction === "left" && index > 0) {
+    [updated[index - 1], updated[index]] =
+      [updated[index], updated[index - 1]];
+  }
+
+  if (direction === "right" && index < allImages.length - 1) {
+    [updated[index + 1], updated[index]] =
+      [updated[index], updated[index + 1]];
+  }
+
+  setAllImages(updated);
+};
 
   const removeNewImage = (i) => {
     setImages(images.filter((_, index) => index !== i));
@@ -218,7 +248,16 @@ data.append("stock", stock);
 
     if (subcategoryId) data.append("subcategory", subcategoryId);
     if (festivalId) data.append("festival", festivalId);
-    images.forEach((img) => data.append("images", img));
+    allImages.forEach((img) => {
+  if (img.type === "new") {
+    data.append("images", img.value);
+  }
+});
+const orderedExistingImages = allImages
+  .filter((img) => img.type === "existing")
+  .map((img) => img.value);
+
+data.append("orderedExistingImages", JSON.stringify(orderedExistingImages));
 
     try {
       setLoading(true);
@@ -674,68 +713,69 @@ data.append("stock", stock);
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {/* Existing Images */}
-                  {existingImages.map((img, i) => (
-                    <div
-                      key={`old-${i}`}
-                      className="aspect-square relative rounded-lg overflow-hidden border group"
-                    >
-                      <img
-                        src={img}
-                        className="w-full h-full object-cover"
-                        alt={`Existing ${i + 1}`}
-                      />
-
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all" />
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setExistingImages((prev) =>
-                            prev.filter((_, idx) => idx !== i)
-                          );
-                          setRemovedImages((prev) => [...prev, img]);
-                        }}
-                        className="absolute top-2 right-2 bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center text-sm active:scale-95 transition"
-                      >
-                        ✕
-                      </button>
-
-                      <div className="absolute bottom-2 left-2 text-xs text-white bg-black/60 rounded px-2 py-1">
-                        Existing
-                      </div>
-                    </div>
-                  ))}
+                  
 
                   {/* New Images */}
-                  {images.map((img, i) => (
-                    <div
-                      key={`new-${i}`}
-                      className="aspect-square relative rounded-lg overflow-hidden border group"
-                    >
-                      <img
-                        src={URL.createObjectURL(img)}
-                        className="w-full h-full object-cover"
-                        alt={`New ${i + 1}`}
-                      />
+                  {allImages.map((img, index) => (
+  <div
+    key={index}
+    className="aspect-square relative rounded-lg overflow-hidden border"
+  >
+    <img
+      src={
+        img.type === "existing"
+          ? img.value
+          : URL.createObjectURL(img.value)
+      }
+      className="w-full h-full object-cover"
+      alt={`Image ${index + 1}`}
+    />
 
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all" />
+    {/* Main Badge */}
+    {index === 0 && (
+      <div className="absolute top-2 left-2 bg-green-600 text-white text-xs px-2 py-1 rounded">
+        Main
+      </div>
+    )}
 
-                      <button
-                        type="button"
-                        onClick={() => removeNewImage(i)}
-                        className="absolute top-2 right-2 bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center text-sm active:scale-95 transition"
-                      >
-                        ✕
-                      </button>
+    {/* Move Buttons */}
+    <div className="absolute bottom-2 left-2 flex gap-2">
+      <button
+        type="button"
+        disabled={index === 0}
+        onClick={() => moveImage(index, "left")}
+        className="bg-black/70 text-white w-8 h-8 rounded-full disabled:opacity-40"
+      >
+        ←
+      </button>
 
-                      <div className="absolute bottom-2 left-2 text-xs text-white bg-black/60 rounded px-2 py-1">
-                        New
-                      </div>
-                    </div>
-                  ))}
+      <button
+        type="button"
+        disabled={index === allImages.length - 1}
+        onClick={() => moveImage(index, "right")}
+        className="bg-black/70 text-white w-8 h-8 rounded-full disabled:opacity-40"
+      >
+        →
+      </button>
+    </div>
+
+    {/* Delete */}
+    <button
+      type="button"
+      onClick={() => removeImage(index)}
+      className="absolute top-2 right-2 bg-black/70 text-white w-9 h-9 rounded-full flex items-center justify-center"
+    >
+      ✕
+    </button>
+
+    <div className="absolute bottom-2 right-2 text-xs bg-black/60 text-white px-2 py-1 rounded">
+      {img.type === "existing" ? "" : "New"}
+    </div>
+  </div>
+))}
 
                   {/* Add Image Button */}
-                  {existingImages.length + images.length < MAX_IMAGES && (
+                  {allImages.length < MAX_IMAGES &&  (
                     <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
                       <FiPlus className="text-2xl text-gray-400 mb-2" />
                       <span className="text-sm text-gray-500">Add</span>
@@ -751,7 +791,7 @@ data.append("stock", stock);
                 </div>
 
                 <p className="text-sm text-gray-500 text-center">
-                  {existingImages.length + images.length} of {MAX_IMAGES} images
+                  {allImages.length} of {MAX_IMAGES} images
                 </p>
               </div>
             </div>
