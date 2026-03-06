@@ -1,21 +1,17 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { FiEdit, FiTrash2 } from "react-icons/fi";
+import { FiEdit, FiTrash2, FiEye, FiEyeOff } from "react-icons/fi";
 
 const AdminList = () => {
   const [menu, setMenu] = useState([]);
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-
   const adminToken = localStorage.getItem("adminToken");
 
   const fetchMenu = async () => {
     try {
       const res = await axios.get(`${BACKEND_URL}/api/menu/admin`, {
-        headers: {
-          Authorization: `Bearer ${adminToken}`,
-        },
+        headers: { Authorization: `Bearer ${adminToken}` },
       });
-
       setMenu(res.data || []);
     } catch (err) {
       console.error("ADMIN MENU FETCH ERROR:", err.response?.data || err);
@@ -23,20 +19,43 @@ const AdminList = () => {
     }
   };
 
-  useEffect(() => {
-    fetchMenu();
-  }, []);
+  useEffect(() => { fetchMenu(); }, []);
 
   const deleteItem = async (id) => {
     if (!window.confirm("Delete this item?")) return;
-
     await axios.delete(`${BACKEND_URL}/api/menu/${id}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-      },
+      headers: { Authorization: `Bearer ${adminToken}` },
     });
-
     fetchMenu();
+  };
+
+  const togglePublish = async (item) => {
+    try {
+      const formData = new FormData();
+      formData.append("name", item.name);
+      formData.append("description", item.description || "");
+      formData.append("servingInfo", item.servingInfo || "");
+      formData.append("category", item.category?._id || item.category);
+      formData.append("variants", JSON.stringify(item.variants));
+      formData.append("branches", JSON.stringify(item.branches));
+      formData.append("preorder", JSON.stringify(item.preorder));
+      formData.append("isBestSeller", item.isBestSeller);
+      formData.append("stock", item.stock);
+      formData.append("isAvailable", String(!item.isAvailable)); // toggle
+
+      await axios.put(`${BACKEND_URL}/api/menu/${item._id}`, formData, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+
+      // Optimistic update
+      setMenu((prev) =>
+        prev.map((m) =>
+          m._id === item._id ? { ...m, isAvailable: !m.isAvailable } : m
+        )
+      );
+    } catch (err) {
+      console.error("TOGGLE PUBLISH ERROR:", err.response?.data || err);
+    }
   };
 
   return (
@@ -47,7 +66,9 @@ const AdminList = () => {
         {menu.map((item) => (
           <div
             key={item._id}
-            className="bg-white p-3 sm:p-4 rounded-xl shadow flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+            className={`bg-white p-3 sm:p-4 rounded-xl shadow flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
+              !item.isAvailable ? "opacity-60" : ""
+            }`}
           >
             {/* LEFT */}
             <div className="flex items-center gap-3 sm:gap-4">
@@ -56,12 +77,21 @@ const AdminList = () => {
                 alt={item.name}
                 className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-lg border"
               />
-
               <div className="min-w-0">
-                <h3 className="font-semibold text-sm sm:text-base truncate">
-                  {item.name}
-                </h3>
-
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-sm sm:text-base truncate">
+                    {item.name}
+                  </h3>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      item.isAvailable
+                        ? "bg-green-100 text-green-700"
+                        : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    {item.isAvailable ? "Published" : "Unpublished"}
+                  </span>
+                </div>
                 <p className="text-xs sm:text-sm text-gray-500 capitalize truncate">
                   {item.category?.name || "No Category"}
                 </p>
@@ -70,16 +100,35 @@ const AdminList = () => {
 
             {/* ACTIONS */}
             <div className="flex gap-2 sm:gap-3 justify-end sm:justify-start">
+              {/* Publish / Unpublish */}
               <button
-                onClick={() =>
-                  (window.location.href = `/admin/edit/${item._id}`)
-                }
+                onClick={() => togglePublish(item)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition ${
+                  item.isAvailable
+                    ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                    : "bg-green-100 text-green-700 hover:bg-green-200"
+                }`}
+              >
+                {item.isAvailable ? (
+                  <FiEyeOff className="text-base" />
+                ) : (
+                  <FiEye className="text-base" />
+                )}
+                <span className="hidden sm:inline">
+                  {item.isAvailable ? "Unpublish" : "Publish"}
+                </span>
+              </button>
+
+              {/* Edit */}
+              <button
+                onClick={() => (window.location.href = `/admin/edit/${item._id}`)}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-100 text-blue-600 text-sm hover:bg-blue-200 transition"
               >
                 <FiEdit className="text-base" />
                 <span className="hidden sm:inline">Edit</span>
               </button>
 
+              {/* Delete */}
               <button
                 onClick={() => deleteItem(item._id)}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-100 text-red-600 text-sm hover:bg-red-200 transition"
@@ -91,7 +140,6 @@ const AdminList = () => {
           </div>
         ))}
 
-        {/* EMPTY STATE */}
         {menu.length === 0 && (
           <div className="bg-white rounded-xl shadow p-6 text-center text-gray-500">
             No menu items found.
