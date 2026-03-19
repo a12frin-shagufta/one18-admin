@@ -313,6 +313,7 @@ const markPaidManually = async (id) => {
       <th className="p-4 text-left">Method</th>
 <th className="p-4 text-left">Date</th>
 <th className="p-4 text-left">Time</th>
+<th className="p-4 text-left">Ordered At</th>
 <th className="p-4 text-left">Payment</th>
 
             <th className="p-4 text-left">Email</th>
@@ -362,6 +363,16 @@ const markPaidManually = async (id) => {
 {/* Time */}
 <td className="p-4 text-sm">
   {order.fulfillmentTime || "-"}
+</td>
+<td className="p-4 text-sm">
+  {order.createdAt
+    ? new Date(order.createdAt).toLocaleString([], {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "-"}
 </td>
 
 
