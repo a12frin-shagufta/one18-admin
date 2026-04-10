@@ -135,6 +135,19 @@ const [stock, setStock] = useState(0);
     }
   }, [categoryId]);
 
+
+  const removeImage = (index) => {
+  const img = allImages[index];
+
+  // If it's an existing image, track it for removal on the backend
+  if (img.type === "existing") {
+    setRemovedImages((prev) => [...prev, img.value]);
+  }
+
+  // Remove from the allImages array regardless of type
+  setAllImages((prev) => prev.filter((_, i) => i !== index));
+};
+
   // Image handlers
 const handleImageSelect = (e) => {
   const files = Array.from(e.target.files);
