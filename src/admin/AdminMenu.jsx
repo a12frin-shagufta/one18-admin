@@ -26,6 +26,7 @@ const AdminMenu = () => {
   const [minDays, setMinDays] = useState(0);
   const [prepaidRequired, setPrepaidRequired] = useState(false);
   const [activeSection, setActiveSection] = useState("basic");
+  const [addOns, setAddOns] = useState([]); 
 
   const MAX_IMAGES = 5;
   const token = localStorage.getItem("adminToken");
@@ -57,6 +58,8 @@ const AdminMenu = () => {
         .get(`${BACKEND_URL}/api/subcategories?category=${categoryId}`)
         .then((res) => setSubcategories(res.data))
         .catch(() => setSubcategories([]));
+        
+        
     } else {
       setSubcategories([]);
       setSubcategoryId("");
@@ -83,6 +86,39 @@ const AdminMenu = () => {
 
     setImages(newImages);
   };
+
+
+  const addGroup = () => {
+  setAddOns([...addOns, { groupName: "", required: false, multiSelect: false, options: [{ label: "", price: "" }] }]);
+};
+
+const removeGroup = (gi) => {
+  setAddOns(addOns.filter((_, i) => i !== gi));
+};
+
+const updateGroup = (gi, field, value) => {
+  const copy = [...addOns];
+  copy[gi][field] = value;
+  setAddOns(copy);
+};
+
+const addOption = (gi) => {
+  const copy = [...addOns];
+  copy[gi].options.push({ label: "", price: "" });
+  setAddOns(copy);
+};
+
+const removeOption = (gi, oi) => {
+  const copy = [...addOns];
+  copy[gi].options = copy[gi].options.filter((_, i) => i !== oi);
+  setAddOns(copy);
+};
+
+const updateOption = (gi, oi, field, value) => {
+  const copy = [...addOns];
+  copy[gi].options[oi][field] = value;
+  setAddOns(copy);
+};
 
   const handleImageSelect = (e) => {
     const files = Array.from(e.target.files);
@@ -165,6 +201,7 @@ const AdminMenu = () => {
     data.append("subcategory", subcategoryId);
     data.append("variants", JSON.stringify(cleanedVariants));
     data.append("isBestSeller", isBestSeller);
+    data.append("addOns", JSON.stringify(addOns));
     data.append("stock", stock);
     if (festivalId) data.append("festival", festivalId);
     data.append("branches", JSON.stringify(selectedBranches));
@@ -202,6 +239,7 @@ const AdminMenu = () => {
       setVariants([{ label: "", price: "" }]);
       setImages([]);
       setIsBestSeller(false);
+      setAddOns([]);
 
       setFestivalId("");
       setActiveSection("basic");
@@ -219,6 +257,7 @@ const AdminMenu = () => {
     { id: "basic", label: "Basic Info" },
     { id: "details", label: "Details" },
     { id: "pricing", label: "Pricing" },
+     { id: "addons", label: "Add-Ons" }, 
     { id: "media", label: "Media" },
     { id: "branches", label: "Branches" }, // ✅ Added for better phone UX
   ];
@@ -432,6 +471,142 @@ const AdminMenu = () => {
                   </div>
                 </div>
               </div>
+
+              {/* ===== ADD-ONS SECTION ===== */}
+<div className={`bg-white rounded-xl shadow-sm p-4 sm:p-6 ${
+  activeSection === "addons" ? "block" : "hidden md:block"
+}`}>
+  <div className="flex items-center justify-between mb-4">
+    <div>
+      <h2 className="text-lg font-semibold text-gray-900">Add-Ons / Extras</h2>
+      <p className="text-sm text-gray-500 mt-0.5">Optional extras customers can add (e.g. +juice $5)</p>
+    </div>
+    <button
+      type="button"
+      onClick={addGroup}
+      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-2 rounded-lg transition"
+    >
+      <FiPlus size={16} />
+      Add Group
+    </button>
+  </div>
+
+  {addOns.length === 0 && (
+    <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-xl">
+      <p className="text-gray-400 text-sm">No add-ons yet.</p>
+      <p className="text-gray-400 text-xs mt-1">Click "Add Group" to create one (e.g. "Add a Drink")</p>
+    </div>
+  )}
+
+  <div className="space-y-4">
+    {addOns.map((group, gi) => (
+      <div key={gi} className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+        
+        {/* Group Header */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-gray-600 mb-1">Group Name *</label>
+            <input
+              type="text"
+              placeholder='e.g. "Add a Drink", "Extra Toppings"'
+              value={group.groupName}
+              onChange={(e) => updateGroup(gi, "groupName", e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+
+          <div className="flex items-end gap-3">
+            {/* Required toggle */}
+            <label className="flex items-center gap-2 cursor-pointer pb-2">
+              <input
+                type="checkbox"
+                checked={group.required}
+                onChange={(e) => updateGroup(gi, "required", e.target.checked)}
+                className="w-4 h-4 text-blue-600 rounded"
+              />
+              <span className="text-sm text-gray-700">Required</span>
+            </label>
+
+            {/* Multi-select toggle */}
+            <label className="flex items-center gap-2 cursor-pointer pb-2">
+              <input
+                type="checkbox"
+                checked={group.multiSelect}
+                onChange={(e) => updateGroup(gi, "multiSelect", e.target.checked)}
+                className="w-4 h-4 text-blue-600 rounded"
+              />
+              <span className="text-sm text-gray-700">Multi-select</span>
+            </label>
+
+            {/* Delete group */}
+            <button
+              type="button"
+              onClick={() => removeGroup(gi)}
+              className="pb-2 text-red-500 hover:text-red-700 transition"
+              title="Remove group"
+            >
+              <FiTrash size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Options */}
+        <div className="space-y-2">
+          <label className="block text-xs font-medium text-gray-600">Options</label>
+
+          {group.options.map((opt, oi) => (
+            <div key={oi} className="flex gap-2 items-center">
+              <input
+                type="text"
+                placeholder="Label (e.g. Orange Juice)"
+                value={opt.label}
+                onChange={(e) => updateOption(gi, oi, "label", e.target.value)}
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              <div className="relative w-28">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">+$</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={opt.price}
+                  onChange={(e) => updateOption(gi, oi, "price", e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => removeOption(gi, oi)}
+                disabled={group.options.length === 1}
+                className="text-red-400 hover:text-red-600 transition disabled:opacity-30"
+              >
+                <FiTrash size={16} />
+              </button>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => addOption(gi)}
+            className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-medium mt-1"
+          >
+            <FiPlus size={14} />
+            Add Option
+          </button>
+        </div>
+
+        {/* Preview badge */}
+        <div className="mt-3 pt-3 border-t border-gray-200">
+          <p className="text-xs text-gray-400">
+            Preview: <span className="text-gray-600 font-medium">{group.groupName || "Group Name"}</span>
+            {" "}— {group.required ? "Required" : "Optional"} · {group.multiSelect ? "Pick multiple" : "Pick one"}
+          </p>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
 
               {/* Pricing & Variants Section */}
               <div
