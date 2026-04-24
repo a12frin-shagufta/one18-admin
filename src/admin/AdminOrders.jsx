@@ -118,7 +118,12 @@ const AdminOrders = () => {
       .map(
         (item) => `
       <tr>
-        <td>${item.name || item.productId?.name || "Item"}</td>
+        <td>
+        ${item.name || item.productId?.name || "Item"}
+        
+          ${item.cakeMessage ? `<br/><span style="font-size:11px;color:#db2777;font-style:italic">🎂 "${item.cakeMessage}"</span>` : ""}
+        </td>
+        
         <td>${item.qty || 1}</td>
         <td>${CURRENCY}${money(item.price)}</td>
 
@@ -510,6 +515,11 @@ const markPaidManually = async (id) => {
             <span>
               {item.productId?.name || item.name}
               {item.variant ? ` (${item.variant})` : ""} × {item.qty}
+              {item.cakeMessage && (
+        <span className="block text-xs text-pink-600 italic mt-0.5">
+          🎂 "{item.cakeMessage}"
+        </span>
+      )}
             </span>
             <span>{formatMoney(item.price * item.qty)}</span>
           </div>
