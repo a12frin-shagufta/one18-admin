@@ -141,6 +141,7 @@ const AdminOrders = () => {
       body { font-family: Arial; padding:40px }
       table { width:100%; border-collapse: collapse; margin-top:20px }
       th,td { padding:10px; border-bottom:1px solid #ddd }
+      
       .total { text-align:right; margin-top:20px; font-weight:bold }
     </style>
   </head>
@@ -151,6 +152,7 @@ const AdminOrders = () => {
 
     <p><b>Date:</b> ${order.fulfillmentDate}</p>
     <p><b>Time:</b> ${order.fulfillmentTime}</p>
+    
 
     <hr/>
 
@@ -169,7 +171,7 @@ const AdminOrders = () => {
 
 
 
-
+${order.customer?.message ? `<p><b>📝 Note:</b> ${order.customer.message}</p>` : ""}
     <table>
       <thead>
         <tr>
@@ -525,6 +527,14 @@ const markPaidManually = async (id) => {
           </div>
         ))}
       </div>
+
+      {/* Order Note */}
+{selectedOrder.customer?.message && (
+  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+    <p className="font-semibold text-amber-800 mb-1">📝 Order Note</p>
+    <p className="text-sm text-amber-900">{selectedOrder.customer.message}</p>
+  </div>
+)}
 
       {/* Totals */}
       <div className="border-t pt-3 space-y-1 text-sm">
