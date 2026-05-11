@@ -121,7 +121,18 @@ const AdminOrders = () => {
         <td>
         ${item.name || item.productId?.name || "Item"}
         
-          ${item.cakeMessage ? `<br/><span style="font-size:11px;color:#db2777;font-style:italic">🎂 "${item.cakeMessage}"</span>` : ""}
+          ${item.cakeMessage ? `
+  <br/>
+  <span style="font-size:11px;color:#db2777;font-style:italic">
+    🎂 "${item.cakeMessage}"
+  </span>
+
+  <br/>
+
+  <span style="font-size:11px;color:#ea580c;font-weight:600">
+    + Custom wording fee paid
+  </span>
+` : ""}
         </td>
         
         <td>${item.qty || 1}</td>
@@ -186,8 +197,25 @@ ${order.customer?.message ? `<p><b>📝 Note:</b> ${order.customer.message}</p>`
     </table>
 
     <div class="total">
-  Subtotal: ${CURRENCY}${money(order.subtotal)}<br/>
-  Delivery: ${CURRENCY}${money(order.deliveryFee || 0)}<br/>
+ Subtotal: ${CURRENCY}${money(
+  order.subtotal -
+  ((order.items || []).reduce((sum, i) => {
+    return i.cakeMessage && i.cakeMessage.trim() !== ""
+      ? sum + (5 * i.qty)
+      : sum;
+  }, 0))
+)}<br/>
+
+Cake Wording:
+${CURRENCY}${money(
+  (order.items || []).reduce((sum, i) => {
+    return i.cakeMessage && i.cakeMessage.trim() !== ""
+      ? sum + (5 * i.qty)
+      : sum;
+  }, 0)
+)}<br/>
+
+Delivery: ${CURRENCY}${money(order.deliveryFee || 0)}<br/>
   Total: ${CURRENCY}${money(order.totalAmount)}
 </div>
 
@@ -518,10 +546,16 @@ const markPaidManually = async (id) => {
               {item.productId?.name || item.name}
               {item.variant ? ` (${item.variant})` : ""} × {item.qty}
               {item.cakeMessage && (
-        <span className="block text-xs text-pink-600 italic mt-0.5">
-          🎂 "{item.cakeMessage}"
-        </span>
-      )}
+  <div className="mt-1">
+    <span className="block text-xs text-pink-600 italic">
+      🎂 "{item.cakeMessage}"
+    </span>
+
+    <span className="block text-xs text-orange-600 font-medium mt-0.5">
+      + Custom wording fee paid
+    </span>
+  </div>
+)}
             </span>
             <span>{formatMoney(item.price * item.qty)}</span>
           </div>
@@ -543,10 +577,23 @@ const markPaidManually = async (id) => {
           <span>{formatMoney(selectedOrder.subtotal)}</span>
         </div>
 
-        <div className="flex justify-between">
-          <span>Delivery Fee</span>
-          <span>{formatMoney(selectedOrder.deliveryFee)}</span>
-        </div>
+      {selectedOrder.items?.some(
+  (i) => i.cakeMessage && i.cakeMessage.trim() !== ""
+) && (
+  <div className="flex justify-between text-orange-600">
+    <span>Cake Wording</span>
+
+    <span>
+      {formatMoney(
+        selectedOrder.items.reduce((sum, i) => {
+          return i.cakeMessage && i.cakeMessage.trim() !== ""
+            ? sum + (5 * i.qty)
+            : sum;
+        }, 0)
+      )}
+    </span>
+  </div>
+)}
 
         <div className="flex justify-between font-bold text-lg border-t pt-2">
           <span>Total</span>
