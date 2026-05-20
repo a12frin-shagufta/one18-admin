@@ -59,6 +59,22 @@ const AdminOrders = () => {
     setOrders(res.data);
   };
 
+
+
+  const deleteOrder = async (id) => {
+  if (!window.confirm("⚠️ Delete this order? This cannot be undone!")) return;
+  try {
+    await axios.delete(`${BACKEND_URL}/api/orders/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    alert("✅ Order deleted");
+    setSelectedOrder(null);
+    refreshOrders();
+  } catch (err) {
+    alert(err.response?.data?.message || "Failed to delete order");
+  }
+};
+
   const refundOrder = async (id) => {
     if (processingId === id) return;
     if (!window.confirm("Refund this order?")) return;
@@ -67,7 +83,7 @@ const AdminOrders = () => {
       await axios.post(
         `${BACKEND_URL}/api/payment/refund/${id}`,
         {},
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       alert("✅ Refund successful");
       await refreshOrders();
@@ -84,7 +100,7 @@ const AdminOrders = () => {
       await axios.put(
         `${BACKEND_URL}/api/orders/${id}/status`,
         { status: "preparing" },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       refreshOrders();
     } catch (err) {
@@ -98,7 +114,7 @@ const AdminOrders = () => {
       await axios.put(
         `${BACKEND_URL}/api/orders/${order._id}/printed`,
         {},
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       refreshOrders();
     } catch (err) {
@@ -106,23 +122,42 @@ const AdminOrders = () => {
     }
 
     const printWindow = window.open("", "_blank");
-    if (!printWindow) { alert("Popup blocked — allow popups"); return; }
+    if (!printWindow) {
+      alert("Popup blocked — allow popups");
+      return;
+    }
 
     const address =
       order.fulfillmentType === "delivery"
         ? `${order.customer?.address || ""}<br/>${order.customer?.apartment ? "Apt: " + order.customer.apartment + "<br/>" : ""}Postal Code: ${order.customer?.postalCode || ""}`
         : order.pickupLocation?.address || "";
 
-    const itemsHTML = (order.items || [])
-      .map((item) => `
-        <tr>
-          <td>${item.name || item.productId?.name || "Item"}
-            ${item.cakeMessage ? `<br/><span style="font-size:11px;color:#db2777;font-style:italic">🎂 "${item.cakeMessage}"</span><br/><span style="font-size:11px;color:#ea580c;font-weight:600">+ Custom wording fee paid</span>` : ""}
-          </td>
-          <td>${item.qty || 1}</td>
-          <td>${CURRENCY}${money(item.price)}</td>
-        </tr>`)
-      .join("");
+const itemsHTML = (order.items || [])
+  .map((item) => {
+    const addOnsRows = (item.addOns || []).map(a => `
+      <tr style="background:#f8faff">
+        <td style="padding-left:24px;color:#1d4ed8;font-size:12px">
+          ↳ ${a.label}${a.price > 0 ? ` (+${CURRENCY}${money(a.price)})` : ""}
+        </td>
+        <td style="color:#1d4ed8;font-size:12px">${item.qty || 1}</td>
+        <td style="color:#1d4ed8;font-size:12px">${CURRENCY}${money(a.price * (item.qty || 1))}</td>
+      </tr>
+    `).join("");
+
+    return `
+      <tr>
+        <td>
+          ${item.name || item.productId?.name || "Item"}
+          ${item.variant && item.variant !== "Default" ? `<span style="color:#888;font-size:11px"> (${item.variant})</span>` : ""}
+          ${item.cakeMessage ? `<br/><span style="font-size:11px;color:#db2777;font-style:italic">🎂 "${item.cakeMessage}"</span><br/><span style="font-size:11px;color:#ea580c;font-weight:600">+ Custom wording fee paid</span>` : ""}
+        </td>
+        <td>${item.qty || 1}</td>
+        <td>${CURRENCY}${money(item.price)}</td>
+      </tr>
+      ${addOnsRows}
+    `;
+  })
+  .join("");
 
     const html = `<html><head><title>Invoice</title><style>body{font-family:Arial;padding:40px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:10px;border-bottom:1px solid #ddd}.total{text-align:right;margin-top:20px;font-weight:bold}</style></head><body>
       <h2>ONE18 Bakery</h2>
@@ -135,8 +170,8 @@ const AdminOrders = () => {
       ${order.customer?.message ? `<p><b>📝 Note:</b> ${order.customer.message}</p>` : ""}
       <table><thead><tr><th>Item</th><th>Qty</th><th>Price</th></tr></thead><tbody>${itemsHTML}</tbody></table>
       <div class="total">
-        Subtotal: ${CURRENCY}${money(order.subtotal - (order.items || []).reduce((sum, i) => i.cakeMessage && i.cakeMessage.trim() !== "" ? sum + 5 * i.qty : sum, 0))}<br/>
-        Cake Wording: ${CURRENCY}${money((order.items || []).reduce((sum, i) => i.cakeMessage && i.cakeMessage.trim() !== "" ? sum + 5 * i.qty : sum, 0))}<br/>
+        Subtotal: ${CURRENCY}${money(order.subtotal - (order.items || []).reduce((sum, i) => (i.cakeMessage && i.cakeMessage.trim() !== "" ? sum + 5 * i.qty : sum), 0))}<br/>
+        Cake Wording: ${CURRENCY}${money((order.items || []).reduce((sum, i) => (i.cakeMessage && i.cakeMessage.trim() !== "" ? sum + 5 * i.qty : sum), 0))}<br/>
         Delivery: ${CURRENCY}${money(order.deliveryFee || 0)}<br/>
         Total: ${CURRENCY}${money(order.totalAmount)}
       </div>
@@ -152,18 +187,30 @@ const AdminOrders = () => {
     if (processingId === id) return;
     try {
       setProcessingId(id);
-      await axios.put(`${BACKEND_URL}/api/payment/paynow/${id}/accept`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.put(
+        `${BACKEND_URL}/api/payment/paynow/${id}/accept`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
       refreshOrders();
-    } finally { setProcessingId(null); }
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   const rejectPayNow = async (id) => {
     if (processingId === id) return;
     try {
       setProcessingId(id);
-      await axios.put(`${BACKEND_URL}/api/payment/paynow/${id}/reject`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.put(
+        `${BACKEND_URL}/api/payment/paynow/${id}/reject`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
       refreshOrders();
-    } finally { setProcessingId(null); }
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   const downloadPaymentReport = async () => {
@@ -188,20 +235,29 @@ const AdminOrders = () => {
     if (processingId === id) return;
     try {
       setProcessingId(id);
-      await axios.put(`${BACKEND_URL}/api/payment/admin/mark-paid/${id}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.put(
+        `${BACKEND_URL}/api/payment/admin/mark-paid/${id}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
       alert("✅ Marked as paid + email sent");
       refreshOrders();
     } catch (err) {
       alert(err.response?.data?.message || "Failed to mark paid");
-    } finally { setProcessingId(null); }
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   /* ── filtering ── */
   const filtered = orders.filter((o) => {
-    const name = `${o.customer?.firstName} ${o.customer?.lastName}`.toLowerCase();
+    const name =
+      `${o.customer?.firstName} ${o.customer?.lastName}`.toLowerCase();
     const id = (o.orderNumber || o._id || "").toLowerCase();
-    const matchSearch = name.includes(search.toLowerCase()) || id.includes(search.toLowerCase());
-    const matchMethod = filterMethod === "all" || o.fulfillmentType === filterMethod;
+    const matchSearch =
+      name.includes(search.toLowerCase()) || id.includes(search.toLowerCase());
+    const matchMethod =
+      filterMethod === "all" || o.fulfillmentType === filterMethod;
     return matchSearch && matchMethod;
   });
 
@@ -213,15 +269,29 @@ const AdminOrders = () => {
       {/* ── Top bar ── */}
       <div className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between sticky top-0 z-30">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Orders</h1>
-          <p className="text-xs text-gray-400 mt-0.5">{filtered.length} of {orders.length} orders</p>
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">
+            Orders
+          </h1>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {filtered.length} of {orders.length} orders
+          </p>
         </div>
         <button
           onClick={downloadPaymentReport}
           className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
           </svg>
           Export Excel
         </button>
@@ -231,8 +301,18 @@ const AdminOrders = () => {
         {/* ── Filters ── */}
         <div className="flex gap-3 mb-5">
           <div className="relative flex-1 max-w-sm">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
             </svg>
             <input
               type="text"
@@ -249,7 +329,11 @@ const AdminOrders = () => {
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors capitalize
                 ${filterMethod === m ? "bg-gray-900 text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
             >
-              {m === "all" ? "All" : m === "delivery" ? "🚚 Delivery" : "🏬 Pickup"}
+              {m === "all"
+                ? "All"
+                : m === "delivery"
+                  ? "🚚 Delivery"
+                  : "🏬 Pickup"}
             </button>
           ))}
         </div>
@@ -259,8 +343,20 @@ const AdminOrders = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100">
-                {["Customer", "Fulfillment", "Date & Time", "Ordered At", "Payment", "Print", "Contact", ""].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
+                {[
+                  "Customer",
+                  "Fulfillment",
+                  "Date & Time",
+                  "Ordered At",
+                  "Payment",
+                  "Print",
+                  "Contact",
+                  "",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50"
+                  >
                     {h}
                   </th>
                 ))}
@@ -269,7 +365,10 @@ const AdminOrders = () => {
             <tbody className="divide-y divide-gray-50">
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-16 text-center text-gray-400 text-sm">
+                  <td
+                    colSpan={8}
+                    className="px-4 py-16 text-center text-gray-400 text-sm"
+                  >
                     No orders match your search.
                   </td>
                 </tr>
@@ -290,7 +389,9 @@ const AdminOrders = () => {
                         <p className="font-semibold text-gray-900 text-sm">
                           {order.customer?.firstName} {order.customer?.lastName}
                         </p>
-                        <p className="text-xs text-gray-400">#{order.orderNumber || order._id?.slice(-6)}</p>
+                        <p className="text-xs text-gray-400">
+                          #{order.orderNumber || order._id?.slice(-6)}
+                        </p>
                       </div>
                     </div>
                   </td>
@@ -298,21 +399,38 @@ const AdminOrders = () => {
                   {/* Fulfillment */}
                   <td className="px-4 py-3">
                     <Badge
-                      label={order.fulfillmentType === "delivery" ? "🚚 Delivery" : "🏬 Pickup"}
-                      colorClass={order.fulfillmentType === "delivery" ? "bg-blue-50 text-blue-700 ring-1 ring-blue-100" : "bg-purple-50 text-purple-700 ring-1 ring-purple-100"}
+                      label={
+                        order.fulfillmentType === "delivery"
+                          ? "🚚 Delivery"
+                          : "🏬 Pickup"
+                      }
+                      colorClass={
+                        order.fulfillmentType === "delivery"
+                          ? "bg-blue-50 text-blue-700 ring-1 ring-blue-100"
+                          : "bg-purple-50 text-purple-700 ring-1 ring-purple-100"
+                      }
                     />
                   </td>
 
                   {/* Date & Time */}
                   <td className="px-4 py-3">
-                    <p className="text-gray-800 font-medium text-sm">{order.fulfillmentDate || "—"}</p>
-                    <p className="text-xs text-gray-400">{order.fulfillmentTime || "—"}</p>
+                    <p className="text-gray-800 font-medium text-sm">
+                      {order.fulfillmentDate || "—"}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {order.fulfillmentTime || "—"}
+                    </p>
                   </td>
 
                   {/* Ordered At */}
                   <td className="px-4 py-3 text-xs text-gray-500">
                     {order.createdAt
-                      ? new Date(order.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+                      ? new Date(order.createdAt).toLocaleString([], {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
                       : "—"}
                   </td>
 
@@ -325,7 +443,10 @@ const AdminOrders = () => {
                       <Badge
                         dot
                         label={order.paymentStatus}
-                        colorClass={statusColor[order.paymentStatus] || statusColor.pending}
+                        colorClass={
+                          statusColor[order.paymentStatus] ||
+                          statusColor.pending
+                        }
                       />
                     </div>
                   </td>
@@ -335,18 +456,29 @@ const AdminOrders = () => {
                     <Badge
                       dot
                       label={order.printStatus || "pending"}
-                      colorClass={order.printStatus === "printed" ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100" : "bg-amber-50 text-amber-700 ring-1 ring-amber-100"}
+                      colorClass={
+                        order.printStatus === "printed"
+                          ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
+                          : "bg-amber-50 text-amber-700 ring-1 ring-amber-100"
+                      }
                     />
                   </td>
 
                   {/* Contact */}
                   <td className="px-4 py-3">
-                    <p className="text-xs text-gray-600 truncate max-w-[160px]">{order.customer?.email || "—"}</p>
-                    <p className="text-xs text-gray-400">{order.customer?.phone || "—"}</p>
+                    <p className="text-xs text-gray-600 truncate max-w-[160px]">
+                      {order.customer?.email || "—"}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {order.customer?.phone || "—"}
+                    </p>
                   </td>
 
                   {/* View btn */}
-                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                  <td
+                    className="px-4 py-3"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <button
                       onClick={() => setSelectedOrder(order)}
                       className="px-3 py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
@@ -376,18 +508,32 @@ const AdminOrders = () => {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <Badge
-                    label={selectedOrder.fulfillmentType === "delivery" ? "🚚 Delivery" : "🏬 Pickup"}
-                    colorClass={selectedOrder.fulfillmentType === "delivery" ? "bg-blue-50 text-blue-700 ring-1 ring-blue-100" : "bg-purple-50 text-purple-700 ring-1 ring-purple-100"}
+                    label={
+                      selectedOrder.fulfillmentType === "delivery"
+                        ? "🚚 Delivery"
+                        : "🏬 Pickup"
+                    }
+                    colorClass={
+                      selectedOrder.fulfillmentType === "delivery"
+                        ? "bg-blue-50 text-blue-700 ring-1 ring-blue-100"
+                        : "bg-purple-50 text-purple-700 ring-1 ring-purple-100"
+                    }
                   />
                   <Badge
                     dot
                     label={selectedOrder.paymentStatus}
-                    colorClass={statusColor[selectedOrder.paymentStatus] || statusColor.pending}
+                    colorClass={
+                      statusColor[selectedOrder.paymentStatus] ||
+                      statusColor.pending
+                    }
                   />
                 </div>
-                <h2 className="text-lg font-bold text-gray-900">Order #{selectedOrder.orderNumber}</h2>
+                <h2 className="text-lg font-bold text-gray-900">
+                  Order #{selectedOrder.orderNumber}
+                </h2>
                 <p className="text-sm text-gray-500">
-                  {selectedOrder.customer?.firstName} {selectedOrder.customer?.lastName}
+                  {selectedOrder.customer?.firstName}{" "}
+                  {selectedOrder.customer?.lastName}
                 </p>
               </div>
               <button
@@ -399,42 +545,78 @@ const AdminOrders = () => {
             </div>
 
             <div className="px-6 py-5 flex-1 space-y-5">
-
               {/* Date / Time */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Date</p>
-                  <p className="font-semibold text-gray-800">{selectedOrder.fulfillmentDate || "—"}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">
+                    Date
+                  </p>
+                  <p className="font-semibold text-gray-800">
+                    {selectedOrder.fulfillmentDate || "—"}
+                  </p>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Time</p>
-                  <p className="font-semibold text-gray-800">{selectedOrder.fulfillmentTime || "—"}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">
+                    Time
+                  </p>
+                  <p className="font-semibold text-gray-800">
+                    {selectedOrder.fulfillmentTime || "—"}
+                  </p>
                 </div>
               </div>
 
               {/* Customer info */}
               <Section title="Customer">
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-1.5 text-sm">
-                  <p className="font-semibold text-gray-800">{selectedOrder.customer?.firstName} {selectedOrder.customer?.lastName}</p>
-                  {selectedOrder.customer?.email && <p className="text-gray-500">{selectedOrder.customer.email}</p>}
-                  {selectedOrder.customer?.phone && <p className="text-gray-500">{selectedOrder.customer.phone}</p>}
-                  {selectedOrder.customer?.company && <p className="text-gray-500 italic">{selectedOrder.customer.company}</p>}
+                  <p className="font-semibold text-gray-800">
+                    {selectedOrder.customer?.firstName}{" "}
+                    {selectedOrder.customer?.lastName}
+                  </p>
+                  {selectedOrder.customer?.email && (
+                    <p className="text-gray-500">
+                      {selectedOrder.customer.email}
+                    </p>
+                  )}
+                  {selectedOrder.customer?.phone && (
+                    <p className="text-gray-500">
+                      {selectedOrder.customer.phone}
+                    </p>
+                  )}
+                  {selectedOrder.customer?.company && (
+                    <p className="text-gray-500 italic">
+                      {selectedOrder.customer.company}
+                    </p>
+                  )}
                 </div>
               </Section>
 
               {/* Address */}
-              <Section title={selectedOrder.fulfillmentType === "delivery" ? "Delivery Address" : "Pickup Location"}>
+              <Section
+                title={
+                  selectedOrder.fulfillmentType === "delivery"
+                    ? "Delivery Address"
+                    : "Pickup Location"
+                }
+              >
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-sm text-gray-700 space-y-1">
                   {selectedOrder.fulfillmentType === "delivery" ? (
                     <>
                       <p>{selectedOrder.customer?.address}</p>
-                      {selectedOrder.customer?.apartment && <p>Apt: {selectedOrder.customer.apartment}</p>}
-                      <p className="text-gray-400">Postal: {selectedOrder.customer?.postalCode}</p>
+                      {selectedOrder.customer?.apartment && (
+                        <p>Apt: {selectedOrder.customer.apartment}</p>
+                      )}
+                      <p className="text-gray-400">
+                        Postal: {selectedOrder.customer?.postalCode}
+                      </p>
                     </>
                   ) : (
                     <>
-                      <p className="font-medium">{selectedOrder.pickupLocation?.name}</p>
-                      <p className="text-gray-500">{selectedOrder.pickupLocation?.address}</p>
+                      <p className="font-medium">
+                        {selectedOrder.pickupLocation?.name}
+                      </p>
+                      <p className="text-gray-500">
+                        {selectedOrder.pickupLocation?.address}
+                      </p>
                     </>
                   )}
                 </div>
@@ -444,8 +626,12 @@ const AdminOrders = () => {
               {selectedOrder.branch && (
                 <Section title="Branch">
                   <div className="bg-purple-50 rounded-xl p-4 border border-purple-100 text-sm">
-                    <p className="font-semibold text-purple-800">{selectedOrder.branch.name}</p>
-                    <p className="text-purple-600">{selectedOrder.branch.address}</p>
+                    <p className="font-semibold text-purple-800">
+                      {selectedOrder.branch.name}
+                    </p>
+                    <p className="text-purple-600">
+                      {selectedOrder.branch.address}
+                    </p>
                   </div>
                 </Section>
               )}
@@ -454,21 +640,39 @@ const AdminOrders = () => {
               <Section title={`Items (${selectedOrder.items?.length || 0})`}>
                 <div className="border border-gray-100 rounded-xl overflow-hidden">
                   {selectedOrder.items?.map((item, i) => (
-                    <div key={i} className={`px-4 py-3 flex justify-between items-start gap-4 text-sm ${i !== 0 ? "border-t border-gray-50" : ""}`}>
+                    <div
+                      key={i}
+                      className={`px-4 py-3 flex justify-between items-start gap-4 text-sm ${i !== 0 ? "border-t border-gray-50" : ""}`}
+                    >
                       <div className="flex-1">
                         <p className="font-medium text-gray-800">
                           {item.productId?.name || item.name}
-                          {item.variant ? <span className="text-gray-400 font-normal"> ({item.variant})</span> : ""}
-                          <span className="text-gray-400 font-normal ml-1">× {item.qty}</span>
+                          {item.variant ? (
+                            <span className="text-gray-400 font-normal">
+                              {" "}
+                              ({item.variant})
+                            </span>
+                          ) : (
+                            ""
+                          )}
+                          <span className="text-gray-400 font-normal ml-1">
+                            × {item.qty}
+                          </span>
                         </p>
                         {item.cakeMessage && (
                           <div className="mt-1 space-y-0.5">
-                            <span className="block text-xs text-pink-600 italic">🎂 "{item.cakeMessage}"</span>
-                            <span className="block text-xs text-orange-600 font-medium">+ Custom wording fee paid</span>
+                            <span className="block text-xs text-pink-600 italic">
+                              🎂 "{item.cakeMessage}"
+                            </span>
+                            <span className="block text-xs text-orange-600 font-medium">
+                              + Custom wording fee paid
+                            </span>
                           </div>
                         )}
                       </div>
-                      <span className="font-semibold text-gray-700 shrink-0">{formatMoney(item.price * item.qty)}</span>
+                      <span className="font-semibold text-gray-700 shrink-0">
+                        {formatMoney(item.price * item.qty)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -477,8 +681,12 @@ const AdminOrders = () => {
               {/* Note */}
               {selectedOrder.customer?.message && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
-                  <p className="font-semibold text-amber-800 mb-1">📝 Order Note</p>
-                  <p className="text-amber-900">{selectedOrder.customer.message}</p>
+                  <p className="font-semibold text-amber-800 mb-1">
+                    📝 Order Note
+                  </p>
+                  <p className="text-amber-900">
+                    {selectedOrder.customer.message}
+                  </p>
                 </div>
               )}
 
@@ -489,12 +697,21 @@ const AdminOrders = () => {
                     <span>Subtotal</span>
                     <span>{formatMoney(selectedOrder.subtotal)}</span>
                   </div>
-                  {selectedOrder.items?.some((i) => i.cakeMessage && i.cakeMessage.trim() !== "") && (
+                  {selectedOrder.items?.some(
+                    (i) => i.cakeMessage && i.cakeMessage.trim() !== "",
+                  ) && (
                     <div className="flex justify-between px-4 py-2.5 text-orange-600">
                       <span>Cake Wording</span>
                       <span>
-                        {formatMoney(selectedOrder.items.reduce((sum, i) =>
-                          i.cakeMessage && i.cakeMessage.trim() !== "" ? sum + 5 * i.qty : sum, 0))}
+                        {formatMoney(
+                          selectedOrder.items.reduce(
+                            (sum, i) =>
+                              i.cakeMessage && i.cakeMessage.trim() !== ""
+                                ? sum + 5 * i.qty
+                                : sum,
+                            0,
+                          ),
+                        )}
                       </span>
                     </div>
                   )}
@@ -512,14 +729,26 @@ const AdminOrders = () => {
               </div>
 
               {/* Payment proof */}
-              {selectedOrder.paymentMethod === "paynow" && selectedOrder.paymentProof && (
-                <Section title="Payment Proof">
-                  <a href={selectedOrder.paymentProof} target="_blank" rel="noreferrer" className="block rounded-xl overflow-hidden border border-gray-200 hover:opacity-90 transition-opacity">
-                    <img src={selectedOrder.paymentProof} alt="Payment proof" className="w-full max-h-56 object-cover" />
-                  </a>
-                  <p className="text-xs text-gray-400 mt-1">Tap to view full size</p>
-                </Section>
-              )}
+              {selectedOrder.paymentMethod === "paynow" &&
+                selectedOrder.paymentProof && (
+                  <Section title="Payment Proof">
+                    <a
+                      href={selectedOrder.paymentProof}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block rounded-xl overflow-hidden border border-gray-200 hover:opacity-90 transition-opacity"
+                    >
+                      <img
+                        src={selectedOrder.paymentProof}
+                        alt="Payment proof"
+                        className="w-full max-h-56 object-cover"
+                      />
+                    </a>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Tap to view full size
+                    </p>
+                  </Section>
+                )}
             </div>
 
             {/* ── Sticky action bar ── */}
