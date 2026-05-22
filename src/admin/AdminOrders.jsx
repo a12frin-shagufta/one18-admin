@@ -775,6 +775,12 @@ const itemsHTML = (order.items || [])
                 >
                   🖨 Print
                 </button>
+                <button
+  onClick={() => deleteOrder(selectedOrder._id)}
+  className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors mt-2"
+>
+  🗑 Delete Order
+</button>
               </div>
 
               {selectedOrder.paymentStatus !== "paid" && (
