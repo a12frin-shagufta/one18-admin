@@ -59,21 +59,19 @@ const AdminOrders = () => {
     setOrders(res.data);
   };
 
-
-
   const deleteOrder = async (id) => {
-  if (!window.confirm("⚠️ Delete this order? This cannot be undone!")) return;
-  try {
-    await axios.delete(`${BACKEND_URL}/api/orders/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    alert("✅ Order deleted");
-    setSelectedOrder(null);
-    refreshOrders();
-  } catch (err) {
-    alert(err.response?.data?.message || "Failed to delete order");
-  }
-};
+    if (!window.confirm("⚠️ Delete this order? This cannot be undone!")) return;
+    try {
+      await axios.delete(`${BACKEND_URL}/api/orders/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert("✅ Order deleted");
+      setSelectedOrder(null);
+      refreshOrders();
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to delete order");
+    }
+  };
 
   const refundOrder = async (id) => {
     if (processingId === id) return;
@@ -132,9 +130,11 @@ const AdminOrders = () => {
         ? `${order.customer?.address || ""}<br/>${order.customer?.apartment ? "Apt: " + order.customer.apartment + "<br/>" : ""}Postal Code: ${order.customer?.postalCode || ""}`
         : order.pickupLocation?.address || "";
 
-const itemsHTML = (order.items || [])
-  .map((item) => {
-    const addOnsRows = (item.addOns || []).map(a => `
+    const itemsHTML = (order.items || [])
+      .map((item) => {
+        const addOnsRows = (item.addOns || [])
+          .map(
+            (a) => `
       <tr style="background:#f8faff">
         <td style="padding-left:24px;color:#1d4ed8;font-size:12px">
           ↳ ${a.label}${a.price > 0 ? ` (+${CURRENCY}${money(a.price)})` : ""}
@@ -142,12 +142,15 @@ const itemsHTML = (order.items || [])
         <td style="color:#1d4ed8;font-size:12px">${item.qty || 1}</td>
         <td style="color:#1d4ed8;font-size:12px">${CURRENCY}${money(a.price * (item.qty || 1))}</td>
       </tr>
-    `).join("");
+    `,
+          )
+          .join("");
 
-    return `
+        return `
       <tr>
         <td>
-          ${item.name || item.productId?.name || "Item"}
+${item.name || item.productId?.name || "Item"}
+${item.productId?.description ? `<br/><span style="font-size:11px;color:#555;font-style:italic">${item.productId.description}</span>` : ""}
           ${item.variant && item.variant !== "Default" ? `<span style="color:#888;font-size:11px"> (${item.variant})</span>` : ""}
           ${item.cakeMessage ? `<br/><span style="font-size:11px;color:#db2777;font-style:italic">🎂 "${item.cakeMessage}"</span><br/><span style="font-size:11px;color:#ea580c;font-weight:600">+ Custom wording fee paid</span>` : ""}
         </td>
@@ -156,8 +159,8 @@ const itemsHTML = (order.items || [])
       </tr>
       ${addOnsRows}
     `;
-  })
-  .join("");
+      })
+      .join("");
 
     const html = `<html><head><title>Invoice</title><style>body{font-family:Arial;padding:40px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:10px;border-bottom:1px solid #ddd}.total{text-align:right;margin-top:20px;font-weight:bold}</style></head><body>
       <h2>ONE18 Bakery</h2>
@@ -775,13 +778,14 @@ const itemsHTML = (order.items || [])
                 >
                   🖨 Print
                 </button>
-                <button
-  onClick={() => deleteOrder(selectedOrder._id)}
-  className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors mt-2"
->
-  🗑 Delete Order
-</button>
+                
               </div>
+              <button
+                  onClick={() => deleteOrder(selectedOrder._id)}
+                  className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors mt-2"
+                >
+                  🗑 Delete Order
+                </button>
 
               {selectedOrder.paymentStatus !== "paid" && (
                 <button
