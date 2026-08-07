@@ -132,24 +132,29 @@ const AdminOrders = () => {
 
     const itemsHTML = (order.items || [])
       .map((item) => {
+        // Add-on quantity (quantity-mode picks, e.g. "4x Nutella") vs
+        // regular checkbox/radio add-ons (no quantity, treat as 1).
         const addOnsRows = (item.addOns || [])
-          .map(
-            (a) => `
+          .map((a) => {
+            const perUnitQty = a.quantity ?? 1;
+            const lineTotal = a.price * perUnitQty * (item.qty || 1);
+            return `
       <tr style="background:#f8faff">
         <td style="padding-left:24px;color:#1d4ed8;font-size:12px">
-          ↳ ${a.label}${a.price > 0 ? ` (+${CURRENCY}${money(a.price)})` : ""}
+          ↳ ${a.label}${a.quantity ? ` × ${a.quantity}` : ""}${a.price > 0 ? ` (+${CURRENCY}${money(a.price)} each)` : ""}
         </td>
         <td style="color:#1d4ed8;font-size:12px">${item.qty || 1}</td>
-        <td style="color:#1d4ed8;font-size:12px">${CURRENCY}${money(a.price * (item.qty || 1))}</td>
+        <td style="color:#1d4ed8;font-size:12px">${a.price > 0 ? `${CURRENCY}${money(lineTotal)}` : "—"}</td>
       </tr>
-    `,
-          )
+    `;
+          })
           .join("");
 
         return `
       <tr>
         <td>
 ${item.name || item.productId?.name || "Item"}
+
 ${item.productId?.description ? `<br/><span style="font-size:11px;color:#555;font-style:italic">${item.productId.description}</span>` : ""}
           ${item.variant && item.variant !== "Default" ? `<span style="color:#888;font-size:11px"> (${item.variant})</span>` : ""}
           ${item.cakeMessage ? `<br/><span style="font-size:11px;color:#db2777;font-style:italic">🎂 "${item.cakeMessage}"</span><br/><span style="font-size:11px;color:#ea580c;font-weight:600">+ Custom wording fee paid</span>` : ""}
@@ -171,6 +176,7 @@ ${item.productId?.description ? `<br/><span style="font-size:11px;color:#555;fon
       <p><b>Customer:</b><br/>${order.customer?.firstName || ""} ${order.customer?.lastName || ""}<br/>Phone: ${order.customer?.phone || ""}<br/>email: ${order.customer?.email || ""}<br/>${order.customer?.company ? "Company: " + order.customer.company + "<br/>" : ""}</p>
       <p><b>${order.fulfillmentType.toUpperCase()} Address:</b><br/>${address}</p>
       ${order.customer?.message ? `<p><b>📝 Note:</b> ${order.customer.message}</p>` : ""}
+      
       <table><thead><tr><th>Item</th><th>Qty</th><th>Price</th></tr></thead><tbody>${itemsHTML}</tbody></table>
       <div class="total">
         Subtotal: ${CURRENCY}${money(order.subtotal - (order.items || []).reduce((sum, i) => (i.cakeMessage && i.cakeMessage.trim() !== "" ? sum + 5 * i.qty : sum), 0))}<br/>
@@ -670,6 +676,33 @@ ${item.productId?.description ? `<br/><span style="font-size:11px;color:#555;fon
                             <span className="block text-xs text-orange-600 font-medium">
                               + Custom wording fee paid
                             </span>
+                          </div>
+                        )}
+
+                        {/* ✅ Chosen add-ons, with quantity for quantity-mode picks */}
+                        {item.addOns?.length > 0 && (
+                          <div className="mt-1.5 space-y-0.5">
+                            {item.addOns.map((addon, ai) => (
+                              <p
+                                key={ai}
+                                className="text-xs text-gray-500 flex justify-between gap-2"
+                              >
+                                <span>
+                                  ↳ {addon.label}
+                                  {addon.quantity ? ` × ${addon.quantity}` : ""}
+                                </span>
+                                {addon.price > 0 && (
+                                  <span className="text-gray-400 flex-shrink-0">
+                                    +
+                                    {formatMoney(
+                                      addon.price *
+                                        (addon.quantity || 1) *
+                                        (item.qty || 1),
+                                    )}
+                                  </span>
+                                )}
+                              </p>
+                            ))}
                           </div>
                         )}
                       </div>
