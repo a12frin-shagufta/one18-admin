@@ -3,6 +3,7 @@ import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { FiPlus, FiTrash, FiArrowLeft, FiUpload } from "react-icons/fi";
 import { toast } from "react-toastify";
+import { groupConfigErrors } from "../utils/ addonRules";
 
 const MAX_IMAGES = 5;
 
@@ -89,10 +90,14 @@ const EditMenu = () => {
           required: !!group.required,
           multiSelect: !!group.multiSelect,
           mode: group.mode === "quantity" ? "quantity" : "price",
-          maxSelect:
-            group.maxSelect === null || group.maxSelect === undefined
-              ? ""
-              : group.maxSelect,
+          maxSelect: group.maxSelect ?? "",
+          // quantity-mode rules; blank-safe defaults for older items
+          step: group.step ?? 1,
+          minPerOption: group.minPerOption ?? 0,
+          maxPerOption: group.maxPerOption ?? "",
+          maxOptions: group.maxOptions ?? "",
+          totalQty: group.totalQty ?? "",
+          totalRule: group.totalRule === "upTo" ? "upTo" : "exact",
           options: (group.options || []).map((opt) => ({
             label: opt.label || "",
             price: opt.price ?? "",
@@ -163,7 +168,13 @@ const EditMenu = () => {
         required: false,
         multiSelect: false,
         mode: "price", // "price" | "quantity"
-        maxSelect: "",
+        maxSelect: "", // price mode: max options selectable
+        step: 2, // quantity mode: customers move in multiples of this
+        minPerOption: 2, // a chosen option must be at least this
+        maxPerOption: "", // optional cap per option, blank = no cap
+        maxOptions: "", // max different options, e.g. 6 flavours
+        totalQty: "", // the bundle size, e.g. 12 pieces
+        totalRule: "exact", // "exact" = must equal total, "upTo" = ceiling
         options: [{ label: "", price: "", quantity: "" }],
       },
     ]);
@@ -297,21 +308,42 @@ const EditMenu = () => {
 
     // Clean add-ons: strip out the field that doesn't apply to the group's mode,
     // and convert maxSelect to a Number (or null if left blank)
-    const cleanedAddOns = addOns.map((group) => ({
-      groupName: group.groupName?.trim() || "",
-      required: !!group.required,
-      multiSelect: !!group.multiSelect,
-      mode: group.mode === "quantity" ? "quantity" : "price",
-      maxSelect:
-        group.maxSelect === "" || group.maxSelect === null
-          ? null
-          : Number(group.maxSelect),
-      options: group.options.map((opt) => ({
-        label: opt.label?.trim() || "",
-        price: group.mode === "quantity" ? 0 : Number(opt.price) || 0,
-        quantity: group.mode === "quantity" ? Number(opt.quantity) || 0 : 0,
-      })),
-    }));
+    // Reject impossible rules before we send anything
+    for (const group of addOns) {
+      const problems = groupConfigErrors(group);
+      if (problems.length) {
+        toast.error(`${group.groupName || "Add-on group"}: ${problems[0]}`);
+        setActiveSection("addons");
+        return;
+      }
+    }
+
+    const numOrNull = (v) =>
+      v === "" || v === null || v === undefined ? null : Number(v);
+
+    const cleanedAddOns = addOns.map((group) => {
+      const isQty = group.mode === "quantity";
+      return {
+        groupName: group.groupName?.trim() || "",
+        required: !!group.required,
+        // a quantity bundle is multi-select by nature
+        multiSelect: isQty ? true : !!group.multiSelect,
+        mode: isQty ? "quantity" : "price",
+        maxSelect: isQty ? null : numOrNull(group.maxSelect),
+        step: isQty ? Math.max(1, Number(group.step) || 1) : 1,
+        minPerOption: isQty ? Number(group.minPerOption) || 0 : 0,
+        maxPerOption: isQty ? numOrNull(group.maxPerOption) : null,
+        maxOptions: isQty ? numOrNull(group.maxOptions) : null,
+        totalQty: isQty ? numOrNull(group.totalQty) : null,
+        totalRule: group.totalRule === "upTo" ? "upTo" : "exact",
+        options: group.options
+          .filter((opt) => opt.label?.trim())
+          .map((opt) => ({
+            label: opt.label.trim(),
+            price: isQty ? 0 : Number(opt.price) || 0,
+          })),
+      };
+    });
 
     const data = new FormData();
     data.append("name", name.trim());
@@ -730,9 +762,9 @@ const EditMenu = () => {
                       </div>
                     </div>
 
-                    {/* Mode toggle + Max Select */}
-                    <div className="flex flex-col sm:flex-row gap-3 mb-4 p-3 bg-white border border-gray-200 rounded-lg">
-                      <div className="flex-1">
+                    {/* Mode toggle + quantity rules */}
+                    <div className="mb-4 p-3 bg-white border border-gray-200 rounded-lg space-y-3">
+                      <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">
                           Option Type
                         </label>
@@ -762,31 +794,123 @@ const EditMenu = () => {
                         </div>
                         <p className="text-xs text-gray-400 mt-1">
                           {group.mode === "quantity"
-                            ? "Customers enter how many of each option (no extra cost)."
+                            ? "Customers split a fixed bundle across options. No extra cost."
                             : "Customers pick options that each add a price."}
                         </p>
                       </div>
 
-                      <div className="w-full sm:w-40">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">
-                          Max Select
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="No limit"
-                          value={group.maxSelect}
-                          onChange={(e) =>
-                            updateGroup(gi, "maxSelect", e.target.value)
-                          }
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                        />
-                        <p className="text-xs text-gray-400 mt-1">
-                          {group.mode === "quantity"
-                            ? "Max total quantity (e.g. 12)"
-                            : "Max options selectable"}
-                        </p>
-                      </div>
+                      {group.mode === "quantity" ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-3 border-t border-gray-100">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Total pieces *
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              placeholder="12"
+                              value={group.totalQty ?? ""}
+                              onChange={(e) => updateGroup(gi, "totalQty", e.target.value)}
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                            <p className="text-xs text-gray-400 mt-1">Bundle size</p>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Increments of *
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              placeholder="2"
+                              value={group.step ?? ""}
+                              onChange={(e) => updateGroup(gi, "step", e.target.value)}
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                            <p className="text-xs text-gray-400 mt-1">Quantity step</p>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Min per option *
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="2"
+                              value={group.minPerOption ?? ""}
+                              onChange={(e) => updateGroup(gi, "minPerOption", e.target.value)}
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                            <p className="text-xs text-gray-400 mt-1">If chosen at all</p>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Max per option
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="No cap"
+                              value={group.maxPerOption ?? ""}
+                              onChange={(e) => updateGroup(gi, "maxPerOption", e.target.value)}
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                            <p className="text-xs text-gray-400 mt-1">Optional</p>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Max options
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              placeholder="6"
+                              value={group.maxOptions ?? ""}
+                              onChange={(e) => updateGroup(gi, "maxOptions", e.target.value)}
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                            <p className="text-xs text-gray-400 mt-1">Different flavours</p>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Total rule
+                            </label>
+                            <select
+                              value={group.totalRule || "exact"}
+                              onChange={(e) => updateGroup(gi, "totalRule", e.target.value)}
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                              <option value="exact">Must equal total</option>
+                              <option value="upTo">Up to total</option>
+                            </select>
+                            <p className="text-xs text-gray-400 mt-1">Exact for bundles</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-full sm:w-40 pt-3 border-t border-gray-100">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Max Select
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            placeholder="No limit"
+                            value={group.maxSelect ?? ""}
+                            onChange={(e) => updateGroup(gi, "maxSelect", e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                          <p className="text-xs text-gray-400 mt-1">Max options selectable</p>
+                        </div>
+                      )}
+
+                      {/* Live check: warn about impossible rules while typing */}
+                      {group.groupName && groupConfigErrors(group).length > 0 && (
+                        <ul className="text-xs text-red-500 list-disc pl-4 space-y-0.5">
+                          {groupConfigErrors(group).map((msg, i) => (
+                            <li key={i}>{msg}</li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -805,26 +929,7 @@ const EditMenu = () => {
                             className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                           />
 
-                          {group.mode === "quantity" ? (
-                            <div className="relative w-24">
-                              <input
-                                type="number"
-                                min="0"
-                                step="1"
-                                placeholder="Qty"
-                                value={opt.quantity}
-                                onChange={(e) =>
-                                  updateOption(
-                                    gi,
-                                    oi,
-                                    "quantity",
-                                    e.target.value,
-                                  )
-                                }
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-center focus:ring-2 focus:ring-blue-500 outline-none"
-                              />
-                            </div>
-                          ) : (
+                          {group.mode === "quantity" ? null : (
                             <div className="relative w-28">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
                                 +$
@@ -869,10 +974,18 @@ const EditMenu = () => {
                         <span className="text-gray-600 font-medium">
                           {group.groupName || "Group Name"}
                         </span>{" "}
-                        — {group.required ? "Required" : "Optional"} ·{" "}
-                        {group.multiSelect ? "Pick multiple" : "Pick one"} ·{" "}
-                        {group.mode === "quantity" ? "Quantity" : "Price"}
-                        {group.maxSelect ? ` · Max ${group.maxSelect}` : ""}
+                        —{" "}
+                        {group.mode === "quantity"
+                          ? `${group.totalRule === "upTo" ? "Up to" : "Exactly"} ${
+                              group.totalQty || "?"
+                            } pieces, in multiples of ${group.step || 1}, min ${
+                              group.minPerOption || 0
+                            } per option${
+                              group.maxOptions ? `, up to ${group.maxOptions} options` : ""
+                            }`
+                          : `${group.required ? "Required" : "Optional"} · ${
+                              group.multiSelect ? "Pick multiple" : "Pick one"
+                            }${group.maxSelect ? ` · Max ${group.maxSelect}` : ""}`}
                       </p>
                     </div>
                   </div>

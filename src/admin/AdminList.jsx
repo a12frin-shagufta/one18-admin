@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { FiEdit, FiTrash2, FiEye, FiEyeOff } from "react-icons/fi";
+import { FiEdit, FiTrash2, FiEye, FiEyeOff, FiCopy } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
 
 const AdminList = () => {
   const [menu, setMenu] = useState([]);
+  const [duplicatingId, setDuplicatingId] = useState(null);
+  const navigate = useNavigate();
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
   const adminToken = localStorage.getItem("adminToken");
 
@@ -29,31 +32,47 @@ const AdminList = () => {
     fetchMenu();
   };
 
+  // ✅ Single-field PATCH. This used to send a full PUT that omitted addOns,
+  // subcategory and festival — so toggling publish silently ERASED the add-on
+  // rules (e.g. the 12pc croissant bundle config) on that item.
   const togglePublish = async (item) => {
     try {
-      const formData = new FormData();
-      formData.append("name", item.name);
-      formData.append("description", item.description || "");
-      formData.append("servingInfo", item.servingInfo || "");
-      formData.append("category", item.category?._id || item.category);
-      formData.append("variants", JSON.stringify(item.variants));
-      formData.append("branches", JSON.stringify(item.branches));
-      formData.append("preorder", JSON.stringify(item.preorder));
-      formData.append("isBestSeller", item.isBestSeller);
-      formData.append("stock", item.stock);
-      formData.append("isAvailable", String(!item.isAvailable));
-
-      await axios.put(`${BACKEND_URL}/api/menu/${item._id}`, formData, {
-        headers: { Authorization: `Bearer ${adminToken}` },
-      });
+      const res = await axios.patch(
+        `${BACKEND_URL}/api/menu/${item._id}/publish`,
+        { isAvailable: !item.isAvailable },
+        { headers: { Authorization: `Bearer ${adminToken}` } },
+      );
 
       setMenu((prev) =>
         prev.map((m) =>
-          m._id === item._id ? { ...m, isAvailable: !m.isAvailable } : m
-        )
+          m._id === item._id ? { ...m, isAvailable: res.data.isAvailable } : m,
+        ),
       );
     } catch (err) {
       console.error("TOGGLE PUBLISH ERROR:", err.response?.data || err);
+      alert(err.response?.data?.message || "Could not change publish state");
+    }
+  };
+
+  // ✅ Duplicate: server copies variants, add-on rules, branches, preorder and
+  // images into a new UNPUBLISHED item, then we jump straight to editing it.
+  const duplicateItem = async (item) => {
+    if (duplicatingId) return;
+    setDuplicatingId(item._id);
+    try {
+      const res = await axios.post(
+        `${BACKEND_URL}/api/menu/${item._id}/duplicate`,
+        {},
+        { headers: { Authorization: `Bearer ${adminToken}` } },
+      );
+      const copy = res.data.item;
+      await fetchMenu();
+      navigate(`/admin/edit/${copy._id}`);
+    } catch (err) {
+      console.error("DUPLICATE ERROR:", err.response?.data || err);
+      alert(err.response?.data?.message || "Could not duplicate this item");
+    } finally {
+      setDuplicatingId(null);
     }
   };
 
@@ -161,9 +180,23 @@ const AdminList = () => {
                 </span>
               </button>
 
+              {/* ✅ Duplicate — copies add-on rules, variants, branches, images
+                   into a new draft, then opens it for editing */}
+              <button
+                onClick={() => duplicateItem(item)}
+                disabled={duplicatingId === item._id}
+                title="Make a copy of this item as an unpublished draft"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-100 text-purple-600 text-sm hover:bg-purple-200 transition disabled:opacity-50 disabled:cursor-wait"
+              >
+                <FiCopy className="text-base" />
+                <span className="hidden sm:inline">
+                  {duplicatingId === item._id ? "Copying..." : "Duplicate"}
+                </span>
+              </button>
+
               {/* Edit */}
               <button
-                onClick={() => (window.location.href = `/admin/edit/${item._id}`)}
+                onClick={() => navigate(`/admin/edit/${item._id}`)}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-100 text-blue-600 text-sm hover:bg-blue-200 transition"
               >
                 <FiEdit className="text-base" />
