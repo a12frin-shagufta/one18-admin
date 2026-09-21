@@ -175,7 +175,15 @@ ${item.productId?.description ? `<br/><span style="font-size:11px;color:#555;fon
       <hr/>
       <p><b>Customer:</b><br/>${order.customer?.firstName || ""} ${order.customer?.lastName || ""}<br/>Phone: ${order.customer?.phone || ""}<br/>email: ${order.customer?.email || ""}<br/>${order.customer?.company ? "Company: " + order.customer.company + "<br/>" : ""}</p>
       <p><b>${order.fulfillmentType.toUpperCase()} Address:</b><br/>${address}</p>
-      ${order.customer?.message ? `<p><b>📝 Note:</b> ${order.customer.message}</p>` : ""}
+      ${order.customer?.message?.trim()
+        ? `<div style="border:2px solid #000;padding:10px 12px;margin:14px 0;font-size:15px">
+             <b>📝 ORDER NOTES</b><br/>
+             <span style="white-space:pre-wrap">${String(order.customer.message)
+               .replace(/&/g, "&amp;")
+               .replace(/</g, "&lt;")
+               .replace(/>/g, "&gt;")}</span>
+           </div>`
+        : ""}
       
       <table><thead><tr><th>Item</th><th>Qty</th><th>Price</th></tr></thead><tbody>${itemsHTML}</tbody></table>
       <div class="total">
