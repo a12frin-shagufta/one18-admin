@@ -156,7 +156,7 @@ const AdminOrders = () => {
 ${item.name || item.productId?.name || "Item"}
 
 
-          ${item.variant && item.variant !== "Default" ? `<span style="color:#888;font-size:11px"> (${item.variant})</span>` : ""}
+         ${item.variant && item.variant !== "Default" && !(item.name || "").includes(item.variant) ? `<span style="color:#888;font-size:11px"> (${item.variant})</span>` : ""}
           ${item.cakeMessage ? `<br/><span style="font-size:11px;color:#db2777;font-style:italic">🎂 "${item.cakeMessage}"</span><br/><span style="font-size:11px;color:#ea580c;font-weight:600">+ Custom wording fee paid</span>` : ""}
         </td>
   <td style="font-size:18px;font-weight:bold">${item.qty || 1}</td>
@@ -739,7 +739,7 @@ ${item.name || item.productId?.name || "Item"}
                 <div className="divide-y divide-gray-100 text-sm">
                   <div className="flex justify-between px-4 py-2.5 text-gray-600">
                     <span>Subtotal</span>
-                    <span>{formatMoney(selectedOrder.subtotal)}</span>
+                    <span>{formatMoney(selectedOrder.subtotal - selectedOrder.items.reduce((sum, i) => (i.cakeMessage && i.cakeMessage.trim() !== "" ? sum + 5 * i.qty : sum), 0))}</span>
                   </div>
                   {selectedOrder.items?.some(
                     (i) => i.cakeMessage && i.cakeMessage.trim() !== "",
