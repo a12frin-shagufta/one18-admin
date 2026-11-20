@@ -157,7 +157,7 @@ ${item.name || item.productId?.name || "Item"}
 
 
          ${item.variant && item.variant !== "Default" && !(item.name || "").includes(item.variant) ? `<span style="color:#888;font-size:11px"> (${item.variant})</span>` : ""}
-          ${item.cakeMessage ? `<br/><span style="font-size:11px;color:#db2777;font-style:italic">🎂 "${item.cakeMessage}"</span><br/><span style="font-size:11px;color:#ea580c;font-weight:600">+ Custom wording fee paid</span>` : ""}
+         ${item.cakeMessage ? `<br/><span style="font-size:16px;font-weight:bold;color:#000">🎂 "${item.cakeMessage}"</span><br/><span style="font-size:11px;color:#ea580c;font-weight:600">+ Custom wording fee paid</span>` : ""}
         </td>
   <td style="font-size:18px;font-weight:bold">${item.qty || 1}</td>
         <td>${CURRENCY}${money(item.price)}</td>
